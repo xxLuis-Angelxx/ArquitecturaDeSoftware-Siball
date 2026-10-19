@@ -1,0 +1,267 @@
+<div class="admin-layout">
+  <aside class="sidebar">
+    <a routerLink="/inicio" class="brand">
+      <span class="brand-icon">S</span>
+      <span>
+        <strong>SIBALL</strong>
+        <small>HOTEL MANAGEMENT</small>
+      </span>
+    </a>
+
+    <p class="menu-label">GENERAL</p>
+
+    <a routerLink="/admin" class="menu-item active">
+      <span>▦</span>
+      Dashboard
+    </a>
+
+    <p class="menu-label">OPERACIONES</p>
+
+    <a routerLink="/habitaciones" class="menu-item">
+      <span>▤</span>
+      Habitaciones
+    </a>
+
+    <a routerLink="/reservas" class="menu-item">
+      <span>▧</span>
+      Nueva reserva
+    </a>
+
+    <a routerLink="/consultar-reserva" class="menu-item">
+      <span>⌕</span>
+      Consultar reserva
+    </a>
+
+    <a routerLink="/contacto" class="menu-item">
+      <span>✉</span>
+      Contacto
+    </a>
+
+    <div class="sidebar-bottom">
+      <span class="status-dot"></span>
+      <span>API de Siball Hotel</span>
+    </div>
+  </aside>
+
+  <main class="dashboard-main">
+    <header class="topbar">
+      <div>
+        <span class="breadcrumb">Siball Hotel / Dashboard</span>
+        <h1>Resumen general</h1>
+      </div>
+
+      <a routerLink="/inicio" class="public-link">
+        Ver sitio público ↗
+      </a>
+    </header>
+
+    <section class="welcome">
+      <div>
+        <span class="welcome-label">PANEL DE OPERACIONES</span>
+        <h2>Estado del hotel</h2>
+        <p>
+          Consulta el estado actual de las habitaciones
+          y las estancias registradas.
+        </p>
+      </div>
+
+      <button
+        type="button"
+        class="refresh-button"
+        (click)="cargarDashboard()"
+        [disabled]="cargando"
+      >
+        ↻ {{ cargando ? 'Actualizando...' : 'Actualizar datos' }}
+      </button>
+    </section>
+
+    @if (cargando) {
+      <section class="state-message">
+        <div class="spinner"></div>
+        <p>Cargando información del hotel...</p>
+      </section>
+    } @else if (error) {
+      <section class="state-message error">
+        <h2>No se pudieron cargar los datos</h2>
+        <p>{{ error }}</p>
+
+        <button
+          type="button"
+          class="refresh-button"
+          (click)="cargarDashboard()"
+        >
+          Reintentar
+        </button>
+      </section>
+    } @else {
+      <section class="stats-grid">
+        <article class="stat-card">
+          <div class="stat-top">
+            <span>Total de habitaciones</span>
+            <span class="stat-icon green">▤</span>
+          </div>
+          <strong>{{ totalHabitaciones }}</strong>
+          <small>Registradas en el sistema</small>
+        </article>
+
+        <article class="stat-card">
+          <div class="stat-top">
+            <span>Disponibles</span>
+            <span class="stat-icon blue">✓</span>
+          </div>
+          <strong>{{ habitacionesDisponibles }}</strong>
+          <small>Estado operativo disponible</small>
+        </article>
+
+        <article class="stat-card">
+          <div class="stat-top">
+            <span>Ocupadas</span>
+            <span class="stat-icon orange">▣</span>
+          </div>
+          <strong>{{ habitacionesOcupadas }}</strong>
+          <small>Actualmente ocupadas</small>
+        </article>
+
+        <article class="stat-card">
+          <div class="stat-top">
+            <span>Pendientes de limpieza</span>
+            <span class="stat-icon red">⌁</span>
+          </div>
+          <strong>{{ pendientesLimpieza }}</strong>
+          <small>Necesitan limpieza</small>
+        </article>
+      </section>
+
+      <section class="content-grid">
+        <article class="data-panel">
+          <div class="panel-header">
+            <div>
+              <h2>Estancias en curso</h2>
+              <p>Huéspedes registrados actualmente</p>
+            </div>
+            <span class="count-badge">{{ estancias.length }}</span>
+          </div>
+
+          @if (estancias.length === 0) {
+            <div class="empty-state">
+              <span class="empty-icon">▤</span>
+              <h3>Sin estancias activas</h3>
+              <p>
+                Aquí aparecerán las estancias cuando se registre
+                un check-in.
+              </p>
+            </div>
+          } @else {
+            <div class="table-wrapper">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Reserva</th>
+                    <th>Huésped</th>
+                    <th>Check-in</th>
+                    <th>Estado</th>
+                  </tr>
+                </thead>
+
+                <tbody>
+                  @for (estancia of estancias; track estancia.id) {
+                    <tr>
+                      <td class="reservation-code">
+                        {{ estancia.reserva.codigo }}
+                      </td>
+                      <td>{{ nombreHuesped(estancia) }}</td>
+                      <td>
+                        {{
+                          estancia.fechaCheckin
+                            | date: 'dd/MM/yyyy HH:mm'
+                        }}
+                      </td>
+                      <td>
+                        <span class="table-status">
+                          En curso
+                        </span>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        </article>
+
+        <article class="data-panel room-panel">
+          <div class="panel-header">
+            <div>
+              <h2>Estado de habitaciones</h2>
+              <p>Resumen del inventario</p>
+            </div>
+          </div>
+
+          @if (habitaciones.length === 0) {
+            <div class="empty-state">
+              <p>No hay habitaciones registradas.</p>
+            </div>
+          } @else {
+            <div class="room-list">
+              @for (habitacion of habitaciones; track habitacion.id) {
+                <div class="room-row">
+                  <div class="room-symbol">H</div>
+
+                  <div class="room-info">
+                    <strong>Habitación {{ habitacion.numero }}</strong>
+                    <span>{{ habitacion.tipo }}</span>
+                  </div>
+
+                  <span
+                    class="room-badge"
+                    [class.available]="habitacion.estado.toLowerCase() === 'disponible'"
+                    [class.occupied]="habitacion.estado.toLowerCase() === 'ocupada'"
+                    [class.cleaning]="habitacion.estado.toLowerCase() === 'pendiente_limpieza'"
+                  >
+                    {{ habitacion.estado.replace('_', ' ') }}
+                  </span>
+                </div>
+              }
+            </div>
+          }
+        </article>
+      </section>
+
+      <section class="quick-actions">
+        <div>
+          <span class="welcome-label">ACCESOS RÁPIDOS</span>
+          <h2>¿Qué deseas hacer?</h2>
+        </div>
+
+        <div class="actions-grid">
+          <a routerLink="/habitaciones" class="action-card">
+            <span class="action-icon">▤</span>
+            <span>
+              <strong>Ver habitaciones</strong>
+              <small>Consultar inventario público</small>
+            </span>
+            <span class="action-arrow">→</span>
+          </a>
+
+          <a routerLink="/reservas" class="action-card">
+            <span class="action-icon">▧</span>
+            <span>
+              <strong>Nueva reserva</strong>
+              <small>Registrar una solicitud</small>
+            </span>
+            <span class="action-arrow">→</span>
+          </a>
+
+          <a routerLink="/consultar-reserva" class="action-card">
+            <span class="action-icon">⌕</span>
+            <span>
+              <strong>Consultar reserva</strong>
+              <small>Buscar por código</small>
+            </span>
+            <span class="action-arrow">→</span>
+          </a>
+        </div>
+      </section>
+    }
+  </main>
+</div>

@@ -1,0 +1,142 @@
+<app-header />
+
+<main class="rooms-page">
+  <section class="rooms-heading">
+    <span class="eyebrow">SIBALL HOTEL · ABANCAY</span>
+    <h1>Nuestras habitaciones</h1>
+    <p>
+      Encuentra el espacio ideal para descansar y disfrutar
+      de tu estadía en Abancay, Apurímac.
+    </p>
+  </section>
+
+  @if (cargando) {
+    <section class="message-state">
+      <div class="spinner"></div>
+      <p>Cargando habitaciones...</p>
+    </section>
+  } @else if (error) {
+    <section class="message-state error">
+      <h2>No pudimos cargar las habitaciones</h2>
+      <p>{{ error }}</p>
+
+      <button
+        type="button"
+        class="retry-button"
+        (click)="cargarHabitaciones()"
+      >
+        Intentar nuevamente
+      </button>
+    </section>
+  } @else if (habitaciones.length === 0) {
+    <section class="message-state">
+      <div class="empty-icon">S</div>
+      <h2>Próximamente</h2>
+      <p>
+        Actualmente no hay habitaciones registradas en el sistema.
+        Vuelve a consultar más adelante.
+      </p>
+    </section>
+  } @else {
+    <section class="rooms-summary">
+      <div>
+        <span class="summary-label">NUESTRO ALOJAMIENTO</span>
+        <h2>Encuentra tu habitación</h2>
+      </div>
+
+      <span class="room-count">
+        {{ habitaciones.length }}
+        {{ habitaciones.length === 1 ? 'habitación registrada' : 'habitaciones registradas' }}
+      </span>
+    </section>
+
+    <section class="rooms-grid">
+      @for (habitacion of habitaciones; track habitacion.id) {
+        <article class="room-card">
+          <div class="room-visual">
+            <span class="room-number">
+              Habitación {{ habitacion.numero }}
+            </span>
+
+            <span
+              class="room-status"
+              [class.unavailable]="habitacion.estado !== 'disponible'"
+            >
+              {{ habitacion.estado.replace('_', ' ') }}
+            </span>
+
+            <span class="room-initial" aria-hidden="true">S</span>
+
+            <div class="visual-caption">
+              SIBALL HOTEL · ABANCAY
+            </div>
+          </div>
+
+          <div class="room-content">
+            <span class="room-type">
+              {{ habitacion.tipo }}
+            </span>
+
+            <h2>Habitación {{ habitacion.numero }}</h2>
+
+            <p class="room-description">
+              {{
+                habitacion.descripcion ||
+                'Consulta la disponibilidad y las características de esta habitación.'
+              }}
+            </p>
+
+            <div class="room-features">
+              <span class="feature-icon" aria-hidden="true">♧</span>
+              <span>
+                Capacidad para
+                {{ habitacion.capacidad }}
+                {{ habitacion.capacidad === 1 ? 'huésped' : 'huéspedes' }}
+              </span>
+            </div>
+
+            <div class="room-divider"></div>
+
+            <div class="room-card-bottom">
+              <div class="room-price">
+                <strong>
+                  {{ formatearPrecio(habitacion.precioNoche) }}
+                </strong>
+                <span>por noche</span>
+              </div>
+
+              <a
+                class="room-button"
+                [routerLink]="['/reservas']"
+                [queryParams]="{ habitacionId: habitacion.id }"
+              >
+                Consultar
+                <span aria-hidden="true">→</span>
+              </a>
+            </div>
+          </div>
+        </article>
+      }
+    </section>
+  }
+
+  <section class="rooms-cta">
+    <div>
+      <span class="eyebrow">PLANIFICA TU ESTADÍA</span>
+      <h2>¿Listo para reservar?</h2>
+      <p>
+        Consulta las fechas de tu viaje y encuentra una habitación
+        que se adapte a tus necesidades.
+      </p>
+    </div>
+
+    <a
+      routerLink="/reservas"
+      class="cta-button"
+    >
+      Consultar disponibilidad →
+    </a>
+  </section>
+</main>
+
+<app-footer />

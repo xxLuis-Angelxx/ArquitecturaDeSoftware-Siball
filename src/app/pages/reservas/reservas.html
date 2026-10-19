@@ -1,0 +1,258 @@
+<app-header />
+
+<main class="booking-page">
+  <section class="booking-heading">
+    <span class="eyebrow">SIBALL HOTEL · ABANCAY</span>
+    <h1>Reserva tu estadía</h1>
+    <p>Elige tus fechas, encuentra tu habitación y completa tus datos.</p>
+  </section>
+
+  @if (reservaCreada) {
+    <section class="success-card">
+      <div class="success-icon">✓</div>
+      <span class="eyebrow">RESERVA REGISTRADA</span>
+      <h2>¡Gracias por elegir Siball Hotel!</h2>
+      <p>Guarda tu código para consultar tu reserva.</p>
+
+      <div class="reservation-code">
+        <span>Código de reserva</span>
+        <strong>{{ reservaCreada.codigo }}</strong>
+      </div>
+
+      <div class="success-details">
+        <div>
+          <span>Estado</span>
+          <strong>{{ reservaCreada.estado }}</strong>
+        </div>
+        <div>
+          <span>Total</span>
+          <strong>{{ formatearPrecio(reservaCreada.total) }}</strong>
+        </div>
+      </div>
+
+      <button class="primary-button" (click)="nuevaReserva()">
+        Realizar otra reserva
+      </button>
+    </section>
+  } @else {
+    <section class="booking-panel">
+      <div class="step-heading">
+        <span class="step-number">01</span>
+        <div>
+          <h2>Fechas y huéspedes</h2>
+          <p>Indica cuándo deseas alojarte.</p>
+        </div>
+      </div>
+
+      <form class="search-form" (ngSubmit)="buscarDisponibilidad()">
+        <label>
+          Fecha de entrada
+          <input
+            type="date"
+            name="fechaEntrada"
+            [(ngModel)]="fechaEntrada"
+            [min]="minFecha"
+            required
+          />
+        </label>
+
+        <label>
+          Fecha de salida
+          <input
+            type="date"
+            name="fechaSalida"
+            [(ngModel)]="fechaSalida"
+            [min]="fechaEntrada || minFecha"
+            required
+          />
+        </label>
+
+        <label>
+          Cantidad de huéspedes
+          <input
+            type="number"
+            name="cantidadHuespedes"
+            [(ngModel)]="cantidadHuespedes"
+            min="1"
+            max="20"
+            required
+          />
+        </label>
+
+        <button
+          class="primary-button search-button"
+          type="submit"
+          [disabled]="buscando"
+        >
+          {{ buscando ? 'Buscando...' : 'Consultar disponibilidad' }}
+        </button>
+      </form>
+
+      @if (error) {
+        <div class="alert alert-error">{{ error }}</div>
+      }
+
+      @if (mensaje && !reservaCreada) {
+        <div class="alert alert-info">{{ mensaje }}</div>
+      }
+    </section>
+
+    @if (busquedaRealizada && habitaciones.length > 0) {
+      <section class="booking-panel">
+        <div class="step-heading">
+          <span class="step-number">02</span>
+          <div>
+            <h2>Selecciona tu habitación</h2>
+            <p>El precio se calcula según las noches de tu estadía.</p>
+          </div>
+        </div>
+
+        <div class="available-rooms">
+          @for (habitacion of habitaciones; track habitacion.id) {
+            <article
+              class="available-room"
+              [class.selected]="habitacionSeleccionada?.id === habitacion.id"
+            >
+              <div class="room-symbol">S</div>
+
+              <div class="room-information">
+                <span class="room-type">{{ habitacion.tipo }}</span>
+                <h3>Habitación {{ habitacion.numero }}</h3>
+                <p>
+                  Capacidad: {{ habitacion.capacidad }} huésped(es)
+                </p>
+                <strong class="room-price">
+                  {{ formatearPrecio(calcularTotal(habitacion)) }}
+                </strong>
+                <span class="price-caption">Total de la estadía</span>
+              </div>
+
+              <button
+                type="button"
+                class="secondary-button"
+                [class.chosen-button]="habitacionSeleccionada?.id === habitacion.id"
+                (click)="seleccionarHabitacion(habitacion)"
+              >
+                {{
+                  habitacionSeleccionada?.id === habitacion.id
+                    ? 'Seleccionada ✓'
+                    : 'Seleccionar'
+                }}
+              </button>
+            </article>
+          }
+        </div>
+      </section>
+    }
+
+    @if (habitacionSeleccionada && busquedaRealizada) {
+      <section class="booking-panel">
+        <div class="step-heading">
+          <span class="step-number">03</span>
+          <div>
+            <h2>Tus datos</h2>
+            <p>Completa la información para registrar la reserva.</p>
+          </div>
+        </div>
+
+        <div class="selected-summary">
+          <div>
+            <span>Habitación seleccionada</span>
+            <strong>
+              {{ habitacionSeleccionada.tipo }}
+              · {{ habitacionSeleccionada.numero }}
+            </strong>
+          </div>
+          <div>
+            <span>Total estimado</span>
+            <strong>
+              {{ formatearPrecio(calcularTotal(habitacionSeleccionada)) }}
+            </strong>
+          </div>
+        </div>
+
+        <form class="guest-form" #formReserva="ngForm" (ngSubmit)="reservar()">
+          <label>
+            Tipo de documento
+            <select
+              name="tipoDocumento"
+              [(ngModel)]="cliente.tipoDocumento"
+              required
+            >
+              <option value="dni">DNI</option>
+              <option value="pasaporte">Pasaporte</option>
+              <option value="carnet_extranjeria">Carné de extranjería</option>
+            </select>
+          </label>
+
+          <label>
+            Número de documento
+            <input
+              type="text"
+              name="numeroDocumento"
+              [(ngModel)]="cliente.numeroDocumento"
+              maxlength="30"
+              required
+            />
+          </label>
+
+          <label>
+            Nombres
+            <input
+              type="text"
+              name="nombres"
+              [(ngModel)]="cliente.nombres"
+              maxlength="100"
+              required
+            />
+          </label>
+
+          <label>
+            Apellidos
+            <input
+              type="text"
+              name="apellidos"
+              [(ngModel)]="cliente.apellidos"
+              maxlength="100"
+              required
+            />
+          </label>
+
+          <label>
+            Teléfono
+            <input
+              type="tel"
+              name="telefono"
+              [(ngModel)]="cliente.telefono"
+              maxlength="20"
+            />
+          </label>
+
+          <label>
+            Correo electrónico
+            <input
+              type="email"
+              name="correo"
+              [(ngModel)]="cliente.correo"
+              maxlength="150"
+            />
+          </label>
+
+          <button
+            class="primary-button submit-button"
+            type="submit"
+            [disabled]="enviando || formReserva.invalid"
+          >
+            {{ enviando ? 'Registrando reserva...' : 'Confirmar reserva' }}
+          </button>
+        </form>
+
+        <p class="booking-note">
+          La disponibilidad se volverá a validar al registrar la reserva.
+        </p>
+      </section>
+    }
+  }
+</main>
+
+<app-footer />

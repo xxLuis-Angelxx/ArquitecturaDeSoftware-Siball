@@ -1,0 +1,224 @@
+<div class="admin-layout">
+  <aside class="sidebar">
+    <a routerLink="/admin" class="brand">
+      <span class="brand-icon">S</span>
+      <span>
+        <strong>SIBALL</strong>
+        <small>HOTEL MANAGEMENT</small>
+      </span>
+    </a>
+
+    <p class="menu-label">GENERAL</p>
+    <a routerLink="/admin" class="menu-item">
+      <span>▦</span>
+      Dashboard
+    </a>
+
+    <p class="menu-label">OPERACIONES</p>
+    <a routerLink="/admin/habitaciones" class="menu-item">
+      <span>▤</span>
+      Habitaciones
+    </a>
+    <a routerLink="/admin/reservas" class="menu-item active">
+      <span>▧</span>
+      Reservas
+    </a>
+    <a routerLink="/admin/estancias" class="menu-item">
+      <span>⌂</span>
+      Estancias
+    </a>
+    <a routerLink="/admin/pagos" class="menu-item">
+      <span>¤</span>
+      Pagos
+    </a>
+
+    <div class="sidebar-bottom">
+      <span class="status-dot"></span>
+      Gestión de reservas
+    </div>
+  </aside>
+
+  <main class="dashboard-main">
+    <header class="topbar">
+      <div>
+        <span class="breadcrumb">Siball Hotel / Reservas</span>
+        <h1>Gestión de reservas</h1>
+      </div>
+
+      <a routerLink="/inicio" class="public-link">
+        Ver sitio público ↗
+      </a>
+    </header>
+
+    <section class="page-heading">
+      <div>
+        <span class="eyebrow">OPERACIONES DEL HOTEL</span>
+        <h2>Consultar reserva</h2>
+        <p>
+          Busca una reserva mediante el código asignado al registrarla.
+        </p>
+      </div>
+
+      <a routerLink="/reservas" class="primary-button">
+        + Nueva reserva
+      </a>
+    </section>
+
+    <section class="panel search-panel">
+      <div class="panel-heading">
+        <div>
+          <h2>Buscar por código</h2>
+          <p>Introduce el código, por ejemplo: SB-A1B2C3.</p>
+        </div>
+      </div>
+
+      <form class="search-form" (ngSubmit)="consultarReserva()">
+        <label for="codigoReserva">Código de reserva</label>
+
+        <div class="search-controls">
+          <input
+            id="codigoReserva"
+            name="codigo"
+            type="text"
+            [(ngModel)]="codigo"
+            placeholder="SB-A1B2C3"
+            maxlength="12"
+            autocomplete="off"
+            required
+          />
+
+          <button
+            type="submit"
+            class="primary-button"
+            [disabled]="buscando"
+          >
+            {{ buscando ? 'Buscando...' : 'Buscar reserva' }}
+          </button>
+
+          <button
+            type="button"
+            class="secondary-button"
+            (click)="limpiarBusqueda()"
+          >
+            Limpiar
+          </button>
+        </div>
+      </form>
+
+      @if (error) {
+        <div class="alert alert-error" role="alert">
+          {{ error }}
+        </div>
+      }
+
+      @if (mensaje && reserva) {
+        <div class="alert alert-success" role="status">
+          {{ mensaje }}
+        </div>
+      }
+    </section>
+
+    @if (reserva) {
+      <section class="panel reservation-panel">
+        <div class="panel-heading">
+          <div>
+            <span class="eyebrow">DETALLE DE RESERVA</span>
+            <h2>{{ reserva.codigo }}</h2>
+            <p>
+              Creada el
+              {{
+                reserva.fechaCreacion
+                  ? (reserva.fechaCreacion | date: 'dd/MM/yyyy HH:mm')
+                  : 'fecha no disponible'
+              }}
+            </p>
+          </div>
+
+          <span
+            class="status-badge"
+            [ngClass]="claseEstado(reserva.estado)"
+          >
+            {{ formatearEstado(reserva.estado) }}
+          </span>
+        </div>
+
+        <div class="detail-grid">
+          <article class="detail-card">
+            <span class="detail-label">Cliente</span>
+            <strong>
+              {{ reserva.cliente.nombres }}
+              {{ reserva.cliente.apellidos }}
+            </strong>
+            <span class="detail-secondary">
+              {{ reserva.cliente.tipoDocumento }}:
+              {{ reserva.cliente.numeroDocumento }}
+            </span>
+          </article>
+
+          <article class="detail-card">
+            <span class="detail-label">Contacto</span>
+            <strong>
+              {{ reserva.cliente.telefono || 'Sin teléfono' }}
+            </strong>
+            <span class="detail-secondary">
+              {{ reserva.cliente.correo || 'Sin correo registrado' }}
+            </span>
+          </article>
+
+          <article class="detail-card">
+            <span class="detail-label">Habitación</span>
+            <strong>
+              {{ reserva.habitacion.numero }} ·
+              {{ reserva.habitacion.tipo }}
+            </strong>
+            <span class="detail-secondary">
+              Capacidad: {{ reserva.habitacion.capacidad }} huéspedes
+            </span>
+          </article>
+
+          <article class="detail-card">
+            <span class="detail-label">Cantidad de huéspedes</span>
+            <strong>{{ reserva.cantidadHuespedes }}</strong>
+            <span class="detail-secondary">Personas registradas</span>
+          </article>
+
+          <article class="detail-card">
+            <span class="detail-label">Fecha de entrada</span>
+            <strong>{{ reserva.fechaEntrada | date: 'dd/MM/yyyy' }}</strong>
+          </article>
+
+          <article class="detail-card">
+            <span class="detail-label">Fecha de salida</span>
+            <strong>{{ reserva.fechaSalida | date: 'dd/MM/yyyy' }}</strong>
+          </article>
+        </div>
+
+        <div class="payment-summary">
+          <div>
+            <span>Estado del pago</span>
+            <span
+              class="status-badge"
+              [ngClass]="claseEstado(reserva.estadoPago)"
+            >
+              {{ formatearEstado(reserva.estadoPago) }}
+            </span>
+          </div>
+
+          <div class="total-block">
+            <span>Importe total de la reserva</span>
+            <strong>{{ formatearPrecio(reserva.total) }}</strong>
+          </div>
+        </div>
+      </section>
+    } @else if (!buscando && !error) {
+      <section class="empty-state">
+        <span class="empty-icon">▧</span>
+        <h2>Busca una reserva</h2>
+        <p>
+          Los datos de la reserva aparecerán aquí cuando introduzcas
+          un código válido.
+        </p>
+      </section>
+    }
+  </main>
+</div>

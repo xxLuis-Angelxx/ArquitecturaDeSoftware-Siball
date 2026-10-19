@@ -1,0 +1,116 @@
+<app-header />
+
+<main class="lookup-page">
+  <section class="lookup-heading">
+    <span class="eyebrow">SIBALL HOTEL · ABANCAY</span>
+    <h1>Consulta tu reserva</h1>
+    <p>
+      Introduce el código que recibiste al registrar tu reserva
+      para consultar sus detalles.
+    </p>
+  </section>
+
+  <section class="lookup-card">
+    <form class="lookup-form" (ngSubmit)="consultar()">
+      <label for="codigo">Código de reserva</label>
+
+      <input
+        id="codigo"
+        name="codigo"
+        type="text"
+        [(ngModel)]="codigo"
+        placeholder="Ej. SB-A1B2C3"
+        maxlength="12"
+        autocomplete="off"
+        required
+      />
+
+      <button
+        type="submit"
+        class="primary-button"
+        [disabled]="buscando"
+      >
+        {{ buscando ? 'Consultando...' : 'Consultar reserva' }}
+      </button>
+    </form>
+
+    @if (error) {
+      <div class="alert-error" role="alert">
+        {{ error }}
+      </div>
+    }
+  </section>
+
+  @if (reserva) {
+    <section class="reservation-card">
+      <div class="reservation-header">
+        <div>
+          <span class="eyebrow">DETALLE DE LA RESERVA</span>
+          <h2>{{ reserva.codigo }}</h2>
+        </div>
+
+        <span class="status-badge">
+          {{ formatearEstado(reserva.estado) }}
+        </span>
+      </div>
+
+      <div class="reservation-content">
+        <div class="detail-block">
+          <span class="detail-label">Huésped principal</span>
+          <strong>
+            {{ reserva.cliente.nombres }}
+            {{ reserva.cliente.apellidos }}
+          </strong>
+        </div>
+
+        <div class="detail-block">
+          <span class="detail-label">Habitación</span>
+          <strong>
+            {{ reserva.habitacion.tipo }}
+            · {{ reserva.habitacion.numero }}
+          </strong>
+        </div>
+
+        <div class="detail-block">
+          <span class="detail-label">Cantidad de huéspedes</span>
+          <strong>{{ reserva.cantidadHuespedes }}</strong>
+        </div>
+
+        <div class="detail-block">
+          <span class="detail-label">Fecha de entrada</span>
+          <strong>{{ reserva.fechaEntrada }}</strong>
+        </div>
+
+        <div class="detail-block">
+          <span class="detail-label">Fecha de salida</span>
+          <strong>{{ reserva.fechaSalida }}</strong>
+        </div>
+
+        <div class="detail-block">
+          <span class="detail-label">Estado del pago</span>
+          <strong>{{ formatearEstado(reserva.estadoPago) }}</strong>
+        </div>
+      </div>
+
+      <div class="reservation-total">
+        <span>Importe total de la estadía</span>
+        <strong>{{ formatearPrecio(reserva.total) }}</strong>
+      </div>
+
+      <button
+        type="button"
+        class="secondary-button"
+        (click)="limpiar()"
+      >
+        Consultar otra reserva
+      </button>
+    </section>
+  }
+
+  <p class="lookup-note">
+    Conserva tu código de reserva para futuras consultas.
+    Si necesitas ayuda con tu estadía, comunícate con el hotel.
+  </p>
+</main>
+
+<app-footer />
