@@ -1,0 +1,494 @@
+<div class="admin-layout">
+  <aside class="sidebar">
+    <a routerLink="/admin" class="brand">
+      <span class="brand-icon">S</span>
+      <span class="brand-name">
+        SIBALL
+        <small>Administración</small>
+      </span>
+    </a>
+
+    <nav class="sidebar-nav">
+      <span class="nav-label">GENERAL</span>
+
+      <a
+        routerLink="/admin"
+        routerLinkActive="active"
+        [routerLinkActiveOptions]="{ exact: true }"
+      >
+        <span class="nav-icon">▦</span>
+        Panel principal
+      </a>
+
+      <span class="nav-label">OPERACIONES</span>
+
+      <a routerLink="/admin/habitaciones" routerLinkActive="active">
+        <span class="nav-icon">▤</span>
+        Habitaciones
+      </a>
+
+      <a routerLink="/admin/reservas" routerLinkActive="active">
+        <span class="nav-icon">▣</span>
+        Reservas
+      </a>
+
+      <a routerLink="/admin/estancias" routerLinkActive="active">
+        <span class="nav-icon">◷</span>
+        Estancias
+      </a>
+
+      <a routerLink="/admin/pagos" routerLinkActive="active">
+        <span class="nav-icon">＄</span>
+        Pagos
+      </a>
+    </nav>
+
+    <div class="sidebar-bottom">
+      <span class="online-indicator"></span>
+      Sistema de gestión hotelera
+      <a routerLink="/inicio" class="back-link">← Volver al sitio web</a>
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <header class="page-header">
+      <div>
+        <p class="eyebrow">OPERACIONES / FINANZAS</p>
+        <h1>Pagos y comprobantes</h1>
+        <p class="page-description">
+          Registra pagos, consulta transacciones y revisa los comprobantes.
+        </p>
+      </div>
+
+      <button
+        type="button"
+        class="button button-secondary"
+        (click)="cargarComprobantes()"
+        [disabled]="cargandoComprobantes"
+      >
+        <span aria-hidden="true">↻</span>
+        {{ cargandoComprobantes ? 'Actualizando...' : 'Actualizar' }}
+      </button>
+    </header>
+
+    <div
+      *ngIf="mensaje"
+      class="message"
+      [class.message-success]="tipoMensaje === 'exito'"
+      [class.message-error]="tipoMensaje === 'error'"
+      role="status"
+      aria-live="polite"
+    >
+      <span class="message-icon">
+        {{ tipoMensaje === 'exito' ? '✓' : '!' }}
+      </span>
+
+      <span>{{ mensaje }}</span>
+
+      <button
+        type="button"
+        class="message-close"
+        aria-label="Cerrar mensaje"
+        (click)="mensaje = ''; tipoMensaje = ''"
+      >
+        ×
+      </button>
+    </div>
+
+    <section class="summary-grid">
+      <article class="summary-card">
+        <div class="summary-icon icon-green">S/</div>
+        <div>
+          <span class="summary-label">Total en comprobantes</span>
+          <strong>{{ totalRecaudado | currency:'PEN':'symbol':'1.2-2' }}</strong>
+          <small>Suma de los comprobantes cargados</small>
+        </div>
+      </article>
+
+      <article class="summary-card">
+        <div class="summary-icon icon-blue">▤</div>
+        <div>
+          <span class="summary-label">Comprobantes emitidos</span>
+          <strong>{{ comprobantes.length }}</strong>
+          <small>Documentos registrados en el sistema</small>
+        </div>
+      </article>
+    </section>
+
+    <section class="content-panel payment-panel">
+      <div class="panel-heading">
+        <div class="section-icon">＋</div>
+        <div>
+          <h2>Registrar un pago</h2>
+          <p>
+            Registra un abono asociado a una reserva existente.
+          </p>
+        </div>
+      </div>
+
+      <form class="payment-form" (ngSubmit)="registrarPago()">
+        <div class="form-field">
+          <label for="codigoReserva">Código de reserva *</label>
+          <input
+            id="codigoReserva"
+            name="codigoReserva"
+            type="text"
+            [(ngModel)]="codigoReserva"
+            placeholder="Ej. SB-A1B2C3"
+            autocomplete="off"
+            required
+          />
+        </div>
+
+        <div class="form-field">
+          <label for="monto">Monto (S/) *</label>
+          <input
+            id="monto"
+            name="monto"
+            type="number"
+            [(ngModel)]="monto"
+            min="0.01"
+            step="0.01"
+            placeholder="0.00"
+            required
+          />
+        </div>
+
+        <div class="form-field">
+          <label for="metodo">Método de pago *</label>
+          <select
+            id="metodo"
+            name="metodo"
+            [(ngModel)]="metodo"
+            required
+          >
+            <option value="efectivo">Efectivo</option>
+            <option value="tarjeta">Tarjeta</option>
+            <option value="transferencia">Transferencia bancaria</option>
+          </select>
+        </div>
+
+        <div class="form-field">
+          <label for="referencia">Referencia</label>
+          <input
+            id="referencia"
+            name="referencia"
+            type="text"
+            [(ngModel)]="referencia"
+            maxlength="100"
+            placeholder="N.º de operación (opcional)"
+          />
+        </div>
+
+        <div class="form-actions">
+          <button
+            type="submit"
+            class="button button-primary"
+            [disabled]="
+              registrandoPago ||
+              !codigoReserva.trim() ||
+              monto == null ||
+              monto <= 0
+            "
+          >
+            {{
+              registrandoPago
+                ? 'Registrando pago...'
+                : 'Registrar pago'
+            }}
+          </button>
+        </div>
+      </form>
+
+      <p class="helper-text">
+        Verifica el código de reserva y el monto antes de registrar el pago.
+        El backend valida el saldo pendiente y genera el comprobante.
+      </p>
+    </section>
+
+    <section class="content-panel history-panel">
+      <div class="panel-heading">
+        <div class="section-icon blue-icon">◷</div>
+        <div>
+          <h2>Historial de pagos</h2>
+          <p>Consulta los pagos asociados a una reserva.</p>
+        </div>
+      </div>
+
+      <form class="search-form" (ngSubmit)="consultarPagos()">
+        <div class="form-field">
+          <label for="codigoConsulta">Código de reserva</label>
+          <input
+            id="codigoConsulta"
+            name="codigoConsulta"
+            type="text"
+            [(ngModel)]="codigoConsulta"
+            placeholder="Escribe el código de reserva"
+            autocomplete="off"
+            required
+          />
+        </div>
+
+        <button
+          type="submit"
+          class="button button-primary"
+          [disabled]="consultandoPagos || !codigoConsulta.trim()"
+        >
+          {{ consultandoPagos ? 'Consultando...' : 'Buscar pagos' }}
+        </button>
+      </form>
+
+      <div *ngIf="consultandoPagos" class="state-card">
+        <span class="loader"></span>
+        <p>Consultando el historial...</p>
+      </div>
+
+      <div
+        *ngIf="!consultandoPagos && pagos.length === 0"
+        class="state-card compact-state"
+      >
+        <div class="empty-icon">＄</div>
+        <p>
+          Busca una reserva para mostrar su historial de pagos.
+        </p>
+      </div>
+
+      <div
+        *ngIf="!consultandoPagos && pagos.length > 0"
+        class="table-wrapper"
+      >
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Fecha</th>
+              <th>Método</th>
+              <th>Referencia</th>
+              <th class="align-right">Monto</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            <tr *ngFor="let pago of pagos">
+              <td class="id-cell">#{{ pago.id }}</td>
+
+              <td>
+                {{ pago.fechaPago | date:'dd/MM/yyyy HH:mm' }}
+              </td>
+
+              <td>
+                <span class="method-badge">
+                  {{ pago.metodo }}
+                </span>
+              </td>
+
+              <td>{{ pago.referencia || '—' }}</td>
+
+              <td class="align-right amount-cell">
+                {{ pago.monto | currency:'PEN':'symbol':'1.2-2' }}
+              </td>
+            </tr>
+          </tbody>
+
+          <tfoot>
+            <tr>
+              <td colspan="4">Total de pagos encontrados</td>
+              <td class="align-right amount-cell">
+                {{
+                  totalPagos() | currency:'PEN':'symbol':'1.2-2'
+                }}
+              </td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </section>
+
+    <section class="content-panel receipts-panel">
+      <div class="section-header">
+        <div>
+          <h2>Comprobantes emitidos</h2>
+          <p>Documentos registrados después de los pagos.</p>
+        </div>
+
+        <span class="count-badge">
+          {{ comprobantes.length }} registros
+        </span>
+      </div>
+
+      <div *ngIf="cargandoComprobantes" class="state-card">
+        <span class="loader"></span>
+        <p>Cargando comprobantes...</p>
+      </div>
+
+      <div
+        *ngIf="!cargandoComprobantes && comprobantes.length === 0"
+        class="state-card compact-state"
+      >
+        <div class="empty-icon">▤</div>
+        <h3>Aún no hay comprobantes</h3>
+        <p>Los comprobantes registrados aparecerán aquí.</p>
+      </div>
+
+      <div
+        *ngIf="!cargandoComprobantes && comprobantes.length > 0"
+        class="table-wrapper"
+      >
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Comprobante</th>
+              <th>Reserva</th>
+              <th>Huésped</th>
+              <th>Fecha de emisión</th>
+              <th class="align-right">Monto</th>
+              <th class="align-right">Detalle</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            <tr *ngFor="let comprobante of comprobantes">
+              <td>
+                <span class="receipt-number">
+                  {{ comprobante.numero }}
+                </span>
+              </td>
+
+              <td>{{ codigoDeComprobante(comprobante) }}</td>
+
+              <td>{{ nombreCliente(comprobante) }}</td>
+
+              <td>
+                {{ comprobante.fechaEmision | date:'dd/MM/yyyy HH:mm' }}
+              </td>
+
+              <td class="align-right amount-cell">
+                {{ comprobante.monto | currency:'PEN':'symbol':'1.2-2' }}
+              </td>
+
+              <td class="align-right">
+                <button
+                  type="button"
+                  class="button button-detail"
+                  (click)="verComprobante(comprobante.id)"
+                  [disabled]="cargandoDetalleId === comprobante.id"
+                >
+                  {{
+                    cargandoDetalleId === comprobante.id
+                      ? 'Cargando...'
+                      : 'Ver detalle'
+                  }}
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div
+  *ngIf="comprobanteSeleccionado"
+  class="modal-backdrop"
+  (click)="cerrarDetalle()"
+>
+  <section
+    class="receipt-modal"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="receiptTitle"
+    (click)="$event.stopPropagation()"
+  >
+    <header class="modal-header">
+      <div>
+        <p class="eyebrow">SIBALL HOTEL</p>
+        <h2 id="receiptTitle">Detalle del comprobante</h2>
+      </div>
+
+      <button
+        type="button"
+        class="modal-close"
+        aria-label="Cerrar detalle"
+        (click)="cerrarDetalle()"
+      >
+        ×
+      </button>
+    </header>
+
+    <div class="receipt-document">
+      <div class="receipt-brand">
+        <span class="receipt-brand-icon">S</span>
+        <div>
+          <strong>SIBALL HOTEL</strong>
+          <span>Comprobante de pago</span>
+        </div>
+      </div>
+
+      <div class="receipt-number-block">
+        <span>NÚMERO DE COMPROBANTE</span>
+        <strong>{{ comprobanteSeleccionado.numero }}</strong>
+      </div>
+
+      <div class="receipt-detail-row">
+        <span>Fecha de emisión</span>
+        <strong>
+          {{
+            comprobanteSeleccionado.fechaEmision
+              | date:'dd/MM/yyyy HH:mm'
+          }}
+        </strong>
+      </div>
+
+      <div class="receipt-detail-row">
+        <span>Código de reserva</span>
+        <strong>
+          {{ codigoDeComprobante(comprobanteSeleccionado) }}
+        </strong>
+      </div>
+
+      <div class="receipt-detail-row">
+        <span>Huésped</span>
+        <strong>{{ nombreCliente(comprobanteSeleccionado) }}</strong>
+      </div>
+
+      <div class="receipt-detail-row">
+        <span>Método de pago</span>
+        <strong>
+          {{ comprobanteSeleccionado.pago?.metodo || 'No disponible' }}
+        </strong>
+      </div>
+
+      <div class="receipt-detail-row">
+        <span>Referencia</span>
+        <strong>
+          {{ comprobanteSeleccionado.pago?.referencia || '—' }}
+        </strong>
+      </div>
+
+      <div class="receipt-total">
+        <span>MONTO PAGADO</span>
+        <strong>
+          {{
+            comprobanteSeleccionado.monto
+              | currency:'PEN':'symbol':'1.2-2'
+          }}
+        </strong>
+      </div>
+
+      <p class="receipt-note">
+        Documento generado por el sistema de gestión de Siball Hotel.
+      </p>
+    </div>
+
+    <footer class="modal-footer">
+      <button
+        type="button"
+        class="button button-primary"
+        (click)="cerrarDetalle()"
+      >
+        Cerrar
+      </button>
+    </footer>
+  </section>
+</div>

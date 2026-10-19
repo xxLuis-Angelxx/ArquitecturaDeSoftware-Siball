@@ -1,0 +1,258 @@
+<div class="admin-layout">
+  <aside class="sidebar">
+    <a routerLink="/admin" class="brand">
+      <span class="brand-icon">S</span>
+      <span>
+        <strong>SIBALL</strong>
+        <small>HOTEL MANAGEMENT</small>
+      </span>
+    </a>
+
+    <p class="menu-label">GENERAL</p>
+    <a routerLink="/admin" class="menu-item">
+      <span>▦</span> Dashboard
+    </a>
+
+    <p class="menu-label">OPERACIONES</p>
+    <a routerLink="/admin/habitaciones" class="menu-item active">
+      <span>▤</span> Habitaciones
+    </a>
+    <a routerLink="/admin/reservas" class="menu-item">
+      <span>▧</span> Reservas
+    </a>
+    <a routerLink="/admin/estancias" class="menu-item">
+      <span>⌂</span> Estancias
+    </a>
+    <a routerLink="/admin/pagos" class="menu-item">
+      <span>¤</span> Pagos
+    </a>
+
+    <div class="sidebar-bottom">
+      <span class="status-dot"></span>
+      Administración de habitaciones
+    </div>
+  </aside>
+
+  <main class="dashboard-main">
+    <header class="topbar">
+      <div>
+        <span class="breadcrumb">Siball Hotel / Habitaciones</span>
+        <h1>Gestión de habitaciones</h1>
+      </div>
+
+      <a routerLink="/inicio" class="public-link">Ver sitio público ↗</a>
+    </header>
+
+    <section class="page-heading">
+      <div>
+        <span class="eyebrow">INVENTARIO DEL HOTEL</span>
+        <h2>Habitaciones</h2>
+        <p>Consulta el inventario y administra el estado operativo.</p>
+      </div>
+
+      <button
+        type="button"
+        class="primary-button"
+        (click)="mostrarFormulario = !mostrarFormulario"
+      >
+        {{ mostrarFormulario ? 'Cerrar formulario' : '+ Nueva habitación' }}
+      </button>
+    </section>
+
+    @if (error) {
+      <div class="alert alert-error" role="alert">{{ error }}</div>
+    }
+
+    @if (mensaje) {
+      <div class="alert alert-success" role="status">{{ mensaje }}</div>
+    }
+
+    <section class="stats-grid">
+      <article class="stat-card">
+        <span>Total registradas</span>
+        <strong>{{ habitaciones.length }}</strong>
+      </article>
+
+      <article class="stat-card">
+        <span>Disponibles</span>
+        <strong>{{ disponibles }}</strong>
+      </article>
+
+      <article class="stat-card">
+        <span>Ocupadas</span>
+        <strong>{{ ocupadas }}</strong>
+      </article>
+
+      <article class="stat-card">
+        <span>Pendientes de limpieza</span>
+        <strong>{{ pendientesLimpieza }}</strong>
+      </article>
+    </section>
+
+    @if (mostrarFormulario) {
+      <section class="panel form-panel">
+        <div class="panel-heading">
+          <div>
+            <h2>Nueva habitación</h2>
+            <p>Registra los datos básicos del inventario.</p>
+          </div>
+        </div>
+
+        <form #habitacionForm="ngForm" (ngSubmit)="guardarHabitacion()">
+          <div class="form-grid">
+            <label>
+              Número
+              <input
+                type="text"
+                name="numero"
+                [(ngModel)]="nuevaHabitacion.numero"
+                maxlength="10"
+                placeholder="Ej. 101"
+                required
+              />
+            </label>
+
+            <label>
+              Tipo
+              <input
+                type="text"
+                name="tipo"
+                [(ngModel)]="nuevaHabitacion.tipo"
+                maxlength="50"
+                placeholder="Ej. Matrimonial"
+                required
+              />
+            </label>
+
+            <label>
+              Capacidad
+              <input
+                type="number"
+                name="capacidad"
+                [(ngModel)]="nuevaHabitacion.capacidad"
+                min="1"
+                required
+              />
+            </label>
+
+            <label>
+              Precio por noche (S/)
+              <input
+                type="number"
+                name="precioNoche"
+                [(ngModel)]="nuevaHabitacion.precioNoche"
+                min="0"
+                step="0.01"
+                required
+              />
+            </label>
+
+            <label class="full-width">
+              Descripción
+              <textarea
+                name="descripcion"
+                [(ngModel)]="nuevaHabitacion.descripcion"
+                maxlength="500"
+                rows="3"
+                placeholder="Características de la habitación"
+              ></textarea>
+            </label>
+          </div>
+
+          <div class="form-actions">
+            <button
+              class="primary-button"
+              type="submit"
+              [disabled]="habitacionForm.invalid || guardando"
+            >
+              {{ guardando ? 'Guardando...' : 'Guardar habitación' }}
+            </button>
+
+            <button
+              class="secondary-button"
+              type="button"
+              (click)="cancelarFormulario()"
+            >
+              Cancelar
+            </button>
+          </div>
+        </form>
+      </section>
+    }
+
+    <section class="panel">
+      <div class="panel-heading">
+        <div>
+          <h2>Inventario</h2>
+          <p>Habitaciones registradas en la base de datos.</p>
+        </div>
+
+        <button
+          type="button"
+          class="secondary-button"
+          (click)="cargarHabitaciones()"
+          [disabled]="cargando"
+        >
+          {{ cargando ? 'Cargando...' : '↻ Actualizar' }}
+        </button>
+      </div>
+
+      @if (cargando) {
+        <div class="state-message">Cargando habitaciones...</div>
+      } @else if (habitaciones.length === 0) {
+        <div class="state-message">
+          No hay habitaciones registradas.
+        </div>
+      } @else {
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Número</th>
+                <th>Tipo</th>
+                <th>Capacidad</th>
+                <th>Precio / noche</th>
+                <th>Estado</th>
+                <th>Acción</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              @for (habitacion of habitaciones; track habitacion.id) {
+                <tr>
+                  <td class="room-number">{{ habitacion.numero }}</td>
+                  <td>{{ habitacion.tipo }}</td>
+                  <td>{{ habitacion.capacidad }} huésped(es)</td>
+                  <td>{{ formatearPrecio(habitacion.precioNoche) }}</td>
+                  <td>
+                    <span
+                      class="status-badge"
+                      [class.available]="habitacion.estado === 'disponible'"
+                      [class.occupied]="habitacion.estado === 'ocupada'"
+                      [class.cleaning]="habitacion.estado === 'pendiente_limpieza'"
+                    >
+                      {{ habitacion.estado.replace('_', ' ') }}
+                    </span>
+                  </td>
+                  <td>
+                    @if (habitacion.estado === 'pendiente_limpieza') {
+                      <button
+                        type="button"
+                        class="table-action"
+                        (click)="finalizarLimpieza(habitacion)"
+                      >
+                        Finalizar limpieza
+                      </button>
+                    } @else {
+                      <span class="no-action">—</span>
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </section>
+  </main>
+</div>

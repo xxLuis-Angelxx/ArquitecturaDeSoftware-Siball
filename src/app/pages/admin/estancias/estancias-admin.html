@@ -1,0 +1,272 @@
+<div class="admin-layout">
+  <aside class="sidebar">
+    <a routerLink="/admin" class="brand">
+      <span class="brand-icon">S</span>
+      <span class="brand-name">
+        SIBALL
+        <small>Administración</small>
+      </span>
+    </a>
+
+    <nav class="sidebar-nav">
+      <span class="nav-label">GENERAL</span>
+
+      <a routerLink="/admin" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+        <span class="nav-icon">▦</span>
+        Panel principal
+      </a>
+
+      <span class="nav-label">OPERACIONES</span>
+
+      <a routerLink="/admin/habitaciones" routerLinkActive="active">
+        <span class="nav-icon">▤</span>
+        Habitaciones
+      </a>
+
+      <a routerLink="/admin/reservas" routerLinkActive="active">
+        <span class="nav-icon">▣</span>
+        Reservas
+      </a>
+
+      <a routerLink="/admin/estancias" routerLinkActive="active">
+        <span class="nav-icon">◷</span>
+        Estancias
+      </a>
+
+      <a routerLink="/admin/pagos" routerLinkActive="active">
+        <span class="nav-icon">＄</span>
+        Pagos
+      </a>
+    </nav>
+
+    <div class="sidebar-bottom">
+      <span class="online-indicator"></span>
+      Sistema de gestión hotelera
+      <a routerLink="/inicio" class="back-link">← Volver al sitio web</a>
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <header class="page-header">
+      <div>
+        <p class="eyebrow">OPERACIONES / ESTANCIAS</p>
+        <h1>Control de estancias</h1>
+        <p class="page-description">
+          Gestiona las llegadas y salidas de los huéspedes.
+        </p>
+      </div>
+
+      <button
+        type="button"
+        class="button button-secondary"
+        (click)="cargarEstancias()"
+        [disabled]="cargando"
+      >
+        <span aria-hidden="true">↻</span>
+        {{ cargando ? 'Actualizando...' : 'Actualizar' }}
+      </button>
+    </header>
+
+    <section class="summary-grid">
+      <article class="summary-card">
+        <div class="summary-icon icon-blue">◷</div>
+        <div>
+          <span class="summary-label">Estancias activas</span>
+          <strong>{{ estancias.length }}</strong>
+          <small>Huéspedes actualmente alojados</small>
+        </div>
+      </article>
+
+      <article class="summary-card">
+        <div class="summary-icon icon-green">✓</div>
+        <div>
+          <span class="summary-label">Habitaciones ocupadas</span>
+          <strong>{{ estancias.length }}</strong>
+          <small>Con check-in registrado</small>
+        </div>
+      </article>
+    </section>
+
+    <div
+      *ngIf="mensaje"
+      class="message"
+      [class.message-success]="tipoMensaje === 'exito'"
+      [class.message-error]="tipoMensaje === 'error'"
+      role="status"
+      aria-live="polite"
+    >
+      <span class="message-icon">
+        {{ tipoMensaje === 'exito' ? '✓' : '!' }}
+      </span>
+      {{ mensaje }}
+      <button
+        type="button"
+        class="message-close"
+        aria-label="Cerrar mensaje"
+        (click)="mensaje = ''; tipoMensaje = ''"
+      >
+        ×
+      </button>
+    </div>
+
+    <section class="checkin-panel">
+      <div class="panel-heading">
+        <div class="section-icon">↘</div>
+        <div>
+          <h2>Registrar check-in</h2>
+          <p>Ingresa el código de una reserva confirmada.</p>
+        </div>
+      </div>
+
+      <form class="checkin-form" (ngSubmit)="registrarCheckin()">
+        <div class="form-field">
+          <label for="codigoReserva">Código de reserva</label>
+          <input
+            id="codigoReserva"
+            name="codigoReserva"
+            type="text"
+            [(ngModel)]="codigoReserva"
+            placeholder="Ej. SB-A1B2C3"
+            autocomplete="off"
+            required
+          />
+        </div>
+
+        <button
+          type="submit"
+          class="button button-primary"
+          [disabled]="registrandoCheckin || !codigoReserva.trim()"
+        >
+          {{
+            registrandoCheckin
+              ? 'Registrando...'
+              : 'Registrar check-in'
+          }}
+        </button>
+      </form>
+
+      <p class="helper-text">
+        El registro requiere una reserva confirmada y una habitación disponible.
+      </p>
+    </section>
+
+    <section class="stays-section">
+      <div class="section-header">
+        <div>
+          <h2>Estancias en curso</h2>
+          <p>Huéspedes que todavía no han registrado su salida.</p>
+        </div>
+
+        <span class="count-badge">{{ estancias.length }} activas</span>
+      </div>
+
+      <div *ngIf="cargando" class="state-card">
+        <span class="loader"></span>
+        <p>Cargando estancias...</p>
+      </div>
+
+      <div
+        *ngIf="!cargando && estancias.length === 0"
+        class="state-card empty-state"
+      >
+        <div class="empty-icon">⌂</div>
+        <h3>No hay estancias activas</h3>
+        <p>
+          Cuando registres un check-in, la estancia aparecerá en esta sección.
+        </p>
+      </div>
+
+      <div *ngIf="!cargando && estancias.length > 0" class="stays-list">
+        <article class="stay-card" *ngFor="let estancia of estancias">
+          <div class="stay-room">
+            <span class="room-label">HABITACIÓN</span>
+            <strong>{{ estancia.reserva.habitacion.numero }}</strong>
+            <span class="room-type">
+              {{ estancia.reserva.habitacion.tipo }}
+            </span>
+          </div>
+
+          <div class="stay-details">
+            <div class="stay-title-row">
+              <h3>{{ nombreCompleto(estancia) }}</h3>
+              <span class="status-badge">
+                <span class="status-dot"></span>
+                En curso
+              </span>
+            </div>
+
+            <p class="booking-code">
+              Reserva: <strong>{{ estancia.reserva.codigo }}</strong>
+            </p>
+
+            <div class="stay-info-grid">
+              <div class="stay-info">
+                <span>Documento</span>
+                <strong>
+                  {{ estancia.reserva.cliente.tipoDocumento }}
+                  {{ estancia.reserva.cliente.numeroDocumento }}
+                </strong>
+              </div>
+
+              <div class="stay-info">
+                <span>Huéspedes</span>
+                <strong>{{ estancia.reserva.cantidadHuespedes }}</strong>
+              </div>
+
+              <div class="stay-info">
+                <span>Fecha de ingreso</span>
+                <strong>
+                  {{ estancia.fechaCheckin | date:'dd/MM/yyyy HH:mm' }}
+                </strong>
+              </div>
+
+              <div class="stay-info">
+                <span>Salida prevista</span>
+                <strong>
+                  {{ estancia.reserva.fechaSalida | date:'dd/MM/yyyy' }}
+                </strong>
+              </div>
+
+              <div class="stay-info">
+                <span>Total de reserva</span>
+                <strong>
+                  {{ estancia.reserva.total | currency:'PEN':'S/ ':'1.2-2' }}
+                </strong>
+              </div>
+
+              <div class="stay-info">
+                <span>Estado del pago</span>
+                <strong
+                  class="payment-state"
+                  [class.payment-paid]="estancia.reserva.estadoPago === 'pagado'"
+                >
+                  {{ estancia.reserva.estadoPago }}
+                </strong>
+              </div>
+            </div>
+          </div>
+
+          <div class="stay-actions">
+            <button
+              type="button"
+              class="button button-checkout"
+              (click)="registrarCheckout(estancia)"
+              [disabled]="
+                estancia.id == null ||
+                procesandoCheckoutId === estancia.id
+              "
+            >
+              {{
+                procesandoCheckoutId === estancia.id
+                  ? 'Procesando...'
+                  : 'Registrar checkout'
+              }}
+            </button>
+
+            <small>Verifica que no haya saldo pendiente.</small>
+          </div>
+        </article>
+      </div>
+    </section>
+  </main>
+</div>
