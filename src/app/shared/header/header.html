@@ -14,12 +14,48 @@
 
   <nav class="navigation">
     <a routerLink="/inicio" routerLinkActive="active">Inicio</a>
-    <a routerLink="/habitaciones" routerLinkActive="active">Habitaciones</a>
-    <a routerLink="/consultar-reserva" routerLinkActive="active">Mi reserva</a>
-    <a routerLink="/contacto" routerLinkActive="active">Contacto</a>
+    <a routerLink="/habitaciones" routerLinkActive="active">
+      Habitaciones
+    </a>
+    <a routerLink="/mis-reservas" routerLinkActive="active">
+      Mis reservas
+    </a>
+    <a routerLink="/contacto" routerLinkActive="active">
+      Contacto
+    </a>
   </nav>
 
-  <a routerLink="/reservas" class="header-button">
-    Reservar
-  </a>
+  <div class="account-actions">
+    @if (usuario$ | async; as usuario) {
+      @if (usuario.rol === 'ADMIN') {
+        <a routerLink="/admin" class="admin-link">
+          Administración
+        </a>
+      }
+
+      <span class="user-greeting">
+        Hola, {{ usuario.nombres || usuario.correo }}
+      </span>
+
+      <button
+        type="button"
+        class="header-button header-button-light"
+        (click)="cerrarSesion()"
+      >
+        Salir
+      </button>
+    } @else {
+      <a routerLink="/login" class="login-link">
+        Iniciar sesión
+      </a>
+
+      <a routerLink="/registro" class="header-button">
+        Crear cuenta
+      </a>
+    }
+
+    <a routerLink="/reservas" class="header-button">
+      Reservar
+    </a>
+  </div>
 </header>

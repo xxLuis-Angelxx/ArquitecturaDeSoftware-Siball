@@ -1,8 +1,12 @@
-import { CommonModule } from '@angular/common';
-import { Component, inject } from '@angular/core';
-import { FormsModule } from '@angular/forms';
-import { ActivatedRoute } from '@angular/router';
 
+import { CommonModule } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
+import { ChangeDetectorRef, Component, inject } from '@angular/core';
+import { FormsModule } from '@angular/forms';
+import { ActivatedRoute, Router } from '@angular/router';
+import { finalize, timeout } from 'rxjs';
+
+import { AuthService } from '../../core/services/auth.service';
 import { HeaderComponent } from '../../shared/header/header';
 import { FooterComponent } from '../../shared/footer/footer';
 
@@ -29,9 +33,12 @@ import { ReservaService } from '../../core/services/reserva.service';
 })
 export class ReservasPage {
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
+  private readonly cdr = inject(ChangeDetectorRef);
   private readonly habitacionService = inject(HabitacionService);
   private readonly reservaService = inject(ReservaService);
 
+  readonly auth = inject(AuthService);
   readonly minFecha = this.obtenerFechaLocal();
 
   fechaEntrada = '';
@@ -45,30 +52,57 @@ export class ReservasPage {
   buscando = false;
   enviando = false;
   busquedaRealizada = false;
+  confirmacionAbierta = false;
 
   error = '';
   mensaje = '';
   reservaCreada: ReservaResponse | null = null;
 
-  cliente = {
-    tipoDocumento: 'dni',
-    numeroDocumento: '',
-    nombres: '',
-    apellidos: '',
-    telefono: '',
-    correo: ''
-  };
+  private ultimaBusquedaDesdeRuta = '';
 
   constructor() {
     this.route.queryParamMap.subscribe(params => {
-      const id = params.get('habitacionId');
-      this.habitacionPreferidaId = id ? Number(id) : null;
+      const idParametro = params.get('habitacionId');
+      const id = idParametro ? Number(idParametro) : NaN;
+
+      this.habitacionPreferidaId =
+        Number.isInteger(id) && id > 0 ? id : null;
+
+      const entrada = params.get('fechaEntrada');
+      const salida = params.get('fechaSalida');
+      const huespedes = params.get('cantidadHuespedes');
+
+      if (!entrada || !salida) {
+        this.ultimaBusquedaDesdeRuta = '';
+        return;
+      }
+
+      this.fechaEntrada = entrada;
+      this.fechaSalida = salida;
+
+      if (huespedes !== null) {
+        const cantidad = Number(huespedes);
+        this.cantidadHuespedes = Number.isInteger(cantidad)
+          ? cantidad
+          : 0;
+      }
+
+      const claveBusqueda = [
+        this.habitacionPreferidaId ?? '',
+        this.fechaEntrada,
+        this.fechaSalida,
+        this.cantidadHuespedes
+      ].join('|');
+
+      if (claveBusqueda !== this.ultimaBusquedaDesdeRuta) {
+        this.ultimaBusquedaDesdeRuta = claveBusqueda;
+        this.buscarDisponibilidad();
+      }
     });
   }
 
   private obtenerFechaLocal(): string {
     const fecha = new Date();
-
     const anio = fecha.getFullYear();
     const mes = String(fecha.getMonth() + 1).padStart(2, '0');
     const dia = String(fecha.getDate()).padStart(2, '0');
@@ -77,6 +111,14 @@ export class ReservasPage {
   }
 
   buscarDisponibilidad(): void {
+    console.log('[DEBUG] Iniciando búsqueda');
+
+    if (this.buscando) {
+      console.warn('[DEBUG] Ya hay una búsqueda en curso');
+      return;
+    }
+
+    this.confirmacionAbierta = false;
     this.error = '';
     this.mensaje = '';
     this.reservaCreada = null;
@@ -99,49 +141,151 @@ export class ReservasPage {
       return;
     }
 
-    if (this.cantidadHuespedes < 1) {
-      this.error = 'Debe alojarse al menos un huésped.';
+    const cantidad = Number(this.cantidadHuespedes);
+
+    if (!Number.isInteger(cantidad) || cantidad < 1 || cantidad > 20) {
+      this.error =
+        'La cantidad de huéspedes debe ser un número entero entre 1 y 20.';
       return;
     }
 
+    this.cantidadHuespedes = cantidad;
     this.buscando = true;
+    this.cdr.detectChanges();
 
-    this.habitacionService.buscarDisponibles(
-      this.fechaEntrada,
-      this.fechaSalida
-    ).subscribe({
-      next: habitaciones => {
-        this.habitaciones = habitaciones.filter(
-          habitacion =>
-            habitacion.capacidad >= this.cantidadHuespedes
-        );
+    console.log('[DEBUG] Buscando:', this.buscando);
+    console.log('[DEBUG] Fechas:', this.fechaEntrada, this.fechaSalida);
 
-        this.busquedaRealizada = true;
-        this.buscando = false;
+    this.habitacionService
+      .buscarDisponibles(this.fechaEntrada, this.fechaSalida)
+      .pipe(
+        timeout({ first: 15000 }),
+        finalize(() => {
+          console.log('[DEBUG] FINALIZE ejecutado');
 
-        if (this.habitacionPreferidaId !== null) {
-          this.habitacionSeleccionada =
-            this.habitaciones.find(
+          this.buscando = false;
+          this.cdr.detectChanges();
+
+          console.log('[DEBUG] Estado final de buscando:', this.buscando);
+        })
+      )
+      .subscribe({
+        next: respuesta => {
+          console.log('[DEBUG] NEXT ejecutado:', respuesta);
+
+          this.habitaciones = (Array.isArray(respuesta) ? respuesta : [])
+            .filter(
               habitacion =>
-                habitacion.id === this.habitacionPreferidaId
-            ) ?? null;
-        }
+                Number(habitacion.capacidad) >= this.cantidadHuespedes
+            );
 
-        if (this.habitaciones.length === 0) {
-          this.mensaje =
-            'No encontramos habitaciones disponibles para esos criterios.';
+          this.busquedaRealizada = true;
+
+          if (this.habitacionPreferidaId !== null) {
+            this.habitacionSeleccionada =
+              this.habitaciones.find(
+                habitacion =>
+                  Number(habitacion.id) === this.habitacionPreferidaId
+              ) ?? null;
+          }
+
+          if (this.habitaciones.length === 0) {
+            this.mensaje =
+              'No encontramos habitaciones disponibles para esas fechas y cantidad de huéspedes.';
+          }
+
+          const volverDelLogin =
+            this.route.snapshot.queryParamMap.get('continuar') === '1';
+
+          if (volverDelLogin) {
+            if (!this.auth.estaAutenticado()) {
+              const returnUrl = this.router.url;
+
+              void this.router.navigate(['/login'], {
+                queryParams: { returnUrl }
+              });
+
+              return;
+            }
+
+            if (this.auth.esAdmin()) {
+              this.mensaje =
+                'Has iniciado sesión como administrador. Para reservar necesitas una cuenta de huésped.';
+            } else if (this.habitacionSeleccionada) {
+              this.confirmacionAbierta = true;
+            } else if (this.habitaciones.length > 0) {
+              this.mensaje =
+                'La habitación que elegiste ya no está disponible. Selecciona otra para continuar.';
+            }
+
+            this.limpiarParametrosDeRetorno();
+          }
+
+          this.cdr.detectChanges();
+        },
+
+        error: (err: unknown) => {
+          console.error('[DEBUG] ERROR ejecutado:', err);
+
+          this.busquedaRealizada = false;
+          this.habitaciones = [];
+          this.habitacionSeleccionada = null;
+
+          if (err instanceof HttpErrorResponse) {
+            if (err.status === 400) {
+              this.error =
+                err.error?.mensaje ??
+                err.error?.detail ??
+                err.error?.message ??
+                'Las fechas enviadas no son válidas.';
+            } else if (err.status === 404) {
+              this.error =
+                'No se encontró el endpoint de disponibilidad. Verifica la URL de la API.';
+            } else if (err.status >= 500) {
+              this.error =
+                err.error?.mensaje ??
+                err.error?.detail ??
+                err.error?.message ??
+                'El backend encontró un error al consultar las habitaciones.';
+            } else if (err.status === 0) {
+              this.error =
+                'No se pudo completar la consulta. Verifica la conexión con el backend.';
+            } else {
+              this.error =
+                err.error?.mensaje ??
+                err.error?.detail ??
+                err.error?.message ??
+                'No se pudo consultar la disponibilidad.';
+            }
+          } else {
+            this.error =
+              'Ocurrió un error inesperado al procesar las habitaciones.';
+          }
+
+          this.cdr.detectChanges();
         }
+      });
+  }
+
+  private limpiarParametrosDeRetorno(): void {
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: {
+        habitacionId: null,
+        fechaEntrada: null,
+        fechaSalida: null,
+        cantidadHuespedes: null,
+        continuar: null
       },
-      error: () => {
-        this.error =
-          'No se pudo consultar la disponibilidad. Verifica que el backend esté funcionando.';
-        this.buscando = false;
-      }
+      queryParamsHandling: 'merge',
+      replaceUrl: true
     });
   }
 
   seleccionarHabitacion(habitacion: Habitacion): void {
     this.habitacionSeleccionada = habitacion;
+    this.habitacionPreferidaId = habitacion.id;
+    this.confirmacionAbierta = false;
     this.error = '';
     this.mensaje = '';
   }
@@ -155,7 +299,7 @@ export class ReservasPage {
       (1000 * 60 * 60 * 24)
     );
 
-    return noches * habitacion.precioNoche;
+    return Math.max(0, noches) * Number(habitacion.precioNoche);
   }
 
   formatearPrecio(precio: number): string {
@@ -165,7 +309,7 @@ export class ReservasPage {
     }).format(precio);
   }
 
-  reservar(): void {
+  continuarConReserva(): void {
     this.error = '';
     this.mensaje = '';
 
@@ -174,13 +318,81 @@ export class ReservasPage {
       return;
     }
 
+    if (this.auth.esAdmin()) {
+      this.error =
+        'Las cuentas administrativas no pueden reservar desde el portal de huéspedes.';
+      return;
+    }
+
+    if (!this.auth.estaAutenticado()) {
+      const returnUrl = this.router.createUrlTree(
+        ['/reservas'],
+        {
+          queryParams: {
+            habitacionId: this.habitacionSeleccionada.id,
+            fechaEntrada: this.fechaEntrada,
+            fechaSalida: this.fechaSalida,
+            cantidadHuespedes: this.cantidadHuespedes,
+            continuar: 1
+          }
+        }
+      ).toString();
+
+      void this.router.navigate(['/login'], {
+        queryParams: { returnUrl }
+      });
+
+      return;
+    }
+
+    this.confirmacionAbierta = true;
+  }
+
+  reservar(): void {
+    this.error = '';
+    this.mensaje = '';
+
+    if (this.enviando) {
+      return;
+    }
+
+    if (!this.auth.estaAutenticado()) {
+      this.continuarConReserva();
+      return;
+    }
+
+    if (this.auth.esAdmin()) {
+      this.error =
+        'Las cuentas administrativas no pueden reservar desde el portal de huéspedes.';
+      return;
+    }
+
+    if (!this.habitacionSeleccionada) {
+      this.error = 'Selecciona una habitación.';
+      return;
+    }
+
+    if (
+      !this.fechaEntrada ||
+      !this.fechaSalida ||
+      this.fechaEntrada < this.minFecha ||
+      this.fechaSalida <= this.fechaEntrada
+    ) {
+      this.error = 'Revisa las fechas de entrada y salida.';
+      return;
+    }
+
+    if (
+      !Number.isInteger(Number(this.cantidadHuespedes)) ||
+      this.cantidadHuespedes < 1 ||
+      this.cantidadHuespedes > this.habitacionSeleccionada.capacidad
+    ) {
+      this.error =
+        'La cantidad de huéspedes supera la capacidad de la habitación.';
+      return;
+    }
+
     const request: ReservaRequest = {
-      tipoDocumento: this.cliente.tipoDocumento,
-      numeroDocumento: this.cliente.numeroDocumento.trim(),
-      nombres: this.cliente.nombres.trim(),
-      apellidos: this.cliente.apellidos.trim(),
-      telefono: this.cliente.telefono.trim(),
-      correo: this.cliente.correo.trim(),
       habitacionId: this.habitacionSeleccionada.id,
       cantidadHuespedes: this.cantidadHuespedes,
       fechaEntrada: this.fechaEntrada,
@@ -189,26 +401,62 @@ export class ReservasPage {
 
     this.enviando = true;
 
-    this.reservaService.crear(request).subscribe({
+    this.reservaService.crear(request).pipe(
+      finalize(() => {
+        this.enviando = false;
+        this.cdr.detectChanges();
+      })
+    ).subscribe({
       next: respuesta => {
         this.reservaCreada = respuesta;
-        this.enviando = false;
+        this.confirmacionAbierta = false;
         this.mensaje = 'Tu reserva se ha registrado correctamente.';
-      },
-      error: error => {
-        this.enviando = false;
+        this.cdr.detectChanges();
 
-        if (error.status === 409) {
+        console.log('[Reservas] Reserva creada correctamente:', respuesta);
+      },
+
+      error: (err: HttpErrorResponse) => {
+        console.error('[Reservas] Error al crear reserva:', err);
+
+        if (err.status === 401) {
+          this.auth.cerrarSesion();
+          this.continuarConReserva();
+          return;
+        }
+
+        if (err.status === 403) {
           this.error =
-            'La habitación ya no está disponible para esas fechas. Consulta nuevamente.';
-        } else if (error.status === 400) {
+            err.error?.mensaje ??
+            err.error?.detail ??
+            err.error?.message ??
+            'Tu cuenta no tiene permiso para registrar esta reserva.';
+        } else if (err.status === 409) {
           this.error =
-            error.error?.message ??
+            err.error?.mensaje ??
+            err.error?.detail ??
+            err.error?.message ??
+            'La habitación ya tiene una reserva para esas fechas. Consulta nuevamente la disponibilidad o selecciona otras fechas.';
+
+          this.confirmacionAbierta = false;
+        } else if (err.status === 400) {
+          this.error =
+            err.error?.mensaje ??
+            err.error?.detail ??
+            err.error?.message ??
             'Revisa los datos enviados e inténtalo nuevamente.';
+        } else if (err.status === 0) {
+          this.error =
+            'No se pudo conectar con el backend al registrar la reserva.';
         } else {
           this.error =
+            err.error?.mensaje ??
+            err.error?.detail ??
+            err.error?.message ??
             'No se pudo registrar la reserva. Verifica la conexión e inténtalo nuevamente.';
         }
+
+        this.cdr.detectChanges();
       }
     });
   }
@@ -218,16 +466,17 @@ export class ReservasPage {
     this.habitacionSeleccionada = null;
     this.habitaciones = [];
     this.busquedaRealizada = false;
+    this.confirmacionAbierta = false;
+
     this.error = '';
     this.mensaje = '';
 
-    this.cliente = {
-      tipoDocumento: 'dni',
-      numeroDocumento: '',
-      nombres: '',
-      apellidos: '',
-      telefono: '',
-      correo: ''
-    };
+    this.fechaEntrada = '';
+    this.fechaSalida = '';
+    this.cantidadHuespedes = 1;
+    this.habitacionPreferidaId = null;
+    this.ultimaBusquedaDesdeRuta = '';
+
+    void this.router.navigateByUrl('/reservas');
   }
 }

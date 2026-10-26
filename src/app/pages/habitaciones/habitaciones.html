@@ -1,3 +1,4 @@
+
 <app-header />
 
 <main class="rooms-page">
@@ -13,7 +14,7 @@
   @if (cargando) {
     <section class="message-state">
       <div class="spinner"></div>
-      <p>Cargando habitaciones...</p>
+      <p>DEBUG: Angular sigue cargando habitaciones...</p>
     </section>
   } @else if (error) {
     <section class="message-state error">
@@ -41,7 +42,7 @@
     <section class="rooms-summary">
       <div>
         <span class="summary-label">NUESTRO ALOJAMIENTO</span>
-        <h2>Encuentra tu habitación</h2>
+        <p>Habitaciones recibidas: {{ habitaciones.length }}</p>
       </div>
 
       <span class="room-count">

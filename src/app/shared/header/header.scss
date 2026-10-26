@@ -99,3 +99,55 @@
     font-size: 12px;
   }
 }
+.account-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.account-actions a {
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.login-link,
+.admin-link {
+  color: #244e40;
+  font-size: 13px;
+}
+
+.user-greeting {
+  color: #525b56;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+}
+
+.header-button-light {
+  border: 1px solid #244e40;
+  cursor: pointer;
+  background: #fff;
+  color: #244e40;
+}
+
+.header-button-light:hover {
+  background: #f4f6f3;
+}
+
+@media (max-width: 1000px) {
+  .header {
+    flex-wrap: wrap;
+  }
+
+  .navigation {
+    gap: 16px;
+  }
+
+  .account-actions {
+    gap: 8px;
+  }
+}

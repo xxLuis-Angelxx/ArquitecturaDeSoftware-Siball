@@ -1,5 +1,6 @@
+
 import { Injectable, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 
 import { Habitacion } from '../models/habitacion.model';
@@ -10,7 +11,9 @@ import { API_CONFIG } from '../api.config';
 })
 export class HabitacionService {
   private readonly http = inject(HttpClient);
-  private readonly url = API_CONFIG.baseUrl + API_CONFIG.endpoints.habitaciones;
+
+  private readonly url =
+    API_CONFIG.baseUrl + API_CONFIG.endpoints.habitaciones;
 
   listar(): Observable<Habitacion[]> {
     return this.http.get<Habitacion[]>(this.url);
@@ -24,9 +27,17 @@ export class HabitacionService {
     fechaEntrada: string,
     fechaSalida: string
   ): Observable<Habitacion[]> {
-    return this.http.get<Habitacion[]>(`${this.url}/disponibles`, {
-      params: { fechaEntrada, fechaSalida }
-    });
+    const params = new HttpParams()
+      .set('fechaEntrada', fechaEntrada)
+      .set('fechaSalida', fechaSalida);
+
+    return this.http.get<Habitacion[]>(
+      `${this.url}/disponibles`,
+      {
+        params,
+        timeout: 15000
+      }
+    );
   }
 
   crear(habitacion: Partial<Habitacion>): Observable<Habitacion> {
@@ -34,6 +45,9 @@ export class HabitacionService {
   }
 
   finalizarLimpieza(id: number): Observable<Habitacion> {
-    return this.http.patch<Habitacion>(`${this.url}/${id}/limpieza`, {});
+    return this.http.patch<Habitacion>(
+      `${this.url}/${id}/limpieza`,
+      {}
+    );
   }
 }

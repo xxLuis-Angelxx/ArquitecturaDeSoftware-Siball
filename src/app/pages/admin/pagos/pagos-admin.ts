@@ -1,5 +1,15 @@
-import { CommonModule, DatePipe, CurrencyPipe } from '@angular/common';
-import { Component, OnInit } from '@angular/core';
+
+import {
+  CommonModule,
+  DatePipe,
+  CurrencyPipe
+} from '@angular/common';
+import {
+  ChangeDetectorRef,
+  Component,
+  OnInit,
+  inject
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { finalize } from 'rxjs';
@@ -24,6 +34,10 @@ import { ComprobanteService } from '../../../core/services/comprobante.service';
   styleUrl: './pagos-admin.scss'
 })
 export class PagosAdminPage implements OnInit {
+  private readonly pagoService = inject(PagoService);
+  private readonly comprobanteService = inject(ComprobanteService);
+  private readonly cdr = inject(ChangeDetectorRef);
+
   codigoReserva = '';
   codigoConsulta = '';
 
@@ -43,33 +57,38 @@ export class PagosAdminPage implements OnInit {
   mensaje = '';
   tipoMensaje: 'exito' | 'error' | '' = '';
 
-  constructor(
-    private readonly pagoService: PagoService,
-    private readonly comprobanteService: ComprobanteService
-  ) {}
-
   ngOnInit(): void {
     this.cargarComprobantes();
   }
 
   get totalRecaudado(): number {
     return this.comprobantes.reduce(
-      (total, comprobante) => total + Number(comprobante.monto || 0),
+      (total, comprobante) =>
+        total + Number(comprobante.monto || 0),
       0
     );
   }
 
   cargarComprobantes(): void {
     this.cargandoComprobantes = true;
+    this.cdr.detectChanges();
 
     this.comprobanteService
       .listar()
-      .pipe(finalize(() => (this.cargandoComprobantes = false)))
+      .pipe(
+        finalize(() => {
+          this.cargandoComprobantes = false;
+          this.cdr.detectChanges();
+        })
+      )
       .subscribe({
-        next: (comprobantes) => {
+        next: comprobantes => {
           this.comprobantes = comprobantes ?? [];
+          this.cdr.detectChanges();
         },
-        error: (error) => {
+        error: error => {
+          console.error('[PagosAdmin] Error al cargar comprobantes:', error);
+
           this.mostrarMensaje(
             this.obtenerMensajeError(
               error,
@@ -94,11 +113,19 @@ export class PagosAdminPage implements OnInit {
 
     if (
       this.monto == null ||
-      !Number.isFinite(this.monto) ||
-      this.monto <= 0
+      !Number.isFinite(Number(this.monto)) ||
+      Number(this.monto) <= 0
     ) {
       this.mostrarMensaje(
         'Ingresa un monto válido mayor que cero.',
+        'error'
+      );
+      return;
+    }
+
+    if (!this.metodo.trim()) {
+      this.mostrarMensaje(
+        'Selecciona un método de pago.',
         'error'
       );
       return;
@@ -113,10 +140,16 @@ export class PagosAdminPage implements OnInit {
 
     this.registrandoPago = true;
     this.limpiarMensaje();
+    this.cdr.detectChanges();
 
     this.pagoService
       .registrar(solicitud)
-      .pipe(finalize(() => (this.registrandoPago = false)))
+      .pipe(
+        finalize(() => {
+          this.registrandoPago = false;
+          this.cdr.detectChanges();
+        })
+      )
       .subscribe({
         next: () => {
           this.mostrarMensaje(
@@ -129,10 +162,14 @@ export class PagosAdminPage implements OnInit {
           this.codigoConsulta = codigo;
           this.codigoReserva = '';
 
+          this.cdr.detectChanges();
+
           this.consultarHistorial(codigo);
           this.cargarComprobantes();
         },
-        error: (error) => {
+        error: error => {
+          console.error('[PagosAdmin] Error al registrar pago:', error);
+
           this.mostrarMensaje(
             this.obtenerMensajeError(
               error,
@@ -161,15 +198,24 @@ export class PagosAdminPage implements OnInit {
   verComprobante(id: number): void {
     this.cargandoDetalleId = id;
     this.limpiarMensaje();
+    this.cdr.detectChanges();
 
     this.comprobanteService
       .buscarPorId(id)
-      .pipe(finalize(() => (this.cargandoDetalleId = null)))
+      .pipe(
+        finalize(() => {
+          this.cargandoDetalleId = null;
+          this.cdr.detectChanges();
+        })
+      )
       .subscribe({
-        next: (comprobante) => {
+        next: comprobante => {
           this.comprobanteSeleccionado = comprobante;
+          this.cdr.detectChanges();
         },
-        error: (error) => {
+        error: error => {
+          console.error('[PagosAdmin] Error al cargar detalle:', error);
+
           this.mostrarMensaje(
             this.obtenerMensajeError(
               error,
@@ -183,6 +229,7 @@ export class PagosAdminPage implements OnInit {
 
   cerrarDetalle(): void {
     this.comprobanteSeleccionado = null;
+    this.cdr.detectChanges();
   }
 
   nombreCliente(comprobante: Comprobante): string {
@@ -212,12 +259,18 @@ export class PagosAdminPage implements OnInit {
   private consultarHistorial(codigo: string): void {
     this.consultandoPagos = true;
     this.limpiarMensaje();
+    this.cdr.detectChanges();
 
     this.pagoService
       .listarPorReserva(codigo)
-      .pipe(finalize(() => (this.consultandoPagos = false)))
+      .pipe(
+        finalize(() => {
+          this.consultandoPagos = false;
+          this.cdr.detectChanges();
+        })
+      )
       .subscribe({
-        next: (pagos) => {
+        next: pagos => {
           this.pagos = pagos ?? [];
           this.codigoConsulta = codigo;
 
@@ -227,8 +280,12 @@ export class PagosAdminPage implements OnInit {
               'error'
             );
           }
+
+          this.cdr.detectChanges();
         },
-        error: (error) => {
+        error: error => {
+          console.error('[PagosAdmin] Error al consultar historial:', error);
+
           this.pagos = [];
 
           this.mostrarMensaje(
@@ -248,11 +305,13 @@ export class PagosAdminPage implements OnInit {
   ): void {
     this.mensaje = mensaje;
     this.tipoMensaje = tipo;
+    this.cdr.detectChanges();
   }
 
   private limpiarMensaje(): void {
     this.mensaje = '';
     this.tipoMensaje = '';
+    this.cdr.detectChanges();
   }
 
   private obtenerMensajeError(
@@ -260,8 +319,8 @@ export class PagosAdminPage implements OnInit {
     alternativa: string
   ): string {
     return (
-      error?.error?.message ||
       error?.error?.mensaje ||
+      error?.error?.message ||
       (typeof error?.error === 'string' ? error.error : '') ||
       alternativa
     );

@@ -23,12 +23,6 @@ export interface Reserva {
 }
 
 export interface ReservaRequest {
-  tipoDocumento: string;
-  numeroDocumento: string;
-  nombres: string;
-  apellidos: string;
-  telefono?: string;
-  correo?: string;
   habitacionId: number;
   cantidadHuespedes: number;
   fechaEntrada: string;

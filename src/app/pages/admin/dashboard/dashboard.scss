@@ -694,3 +694,283 @@ td {
     transition-duration: 0.01ms !important;
   }
 }
+/* =========================================
+   IDENTIDAD VISUAL UNIFICADA SIBALL ADMIN
+   ========================================= */
+
+:host {
+  color: #202b3c;
+  background: #f5f7fb;
+  font-family: Inter, "Segoe UI", Arial, sans-serif;
+}
+
+.admin-layout {
+  grid-template-columns: 250px minmax(0, 1fr);
+  background: #f5f7fb;
+  color: #202b3c;
+}
+
+.sidebar {
+  background: #172638;
+  color: #d7dfeb;
+  padding: 28px 18px 20px;
+}
+
+.brand {
+  gap: 12px;
+  padding: 0 10px 32px;
+  border-bottom: 1px solid #314054;
+  color: #ffffff;
+}
+
+.brand-icon {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 42px;
+  height: 42px;
+  border: none;
+  border-radius: 12px;
+  color: #15243a;
+  background: #e6bd78;
+  font-family: inherit;
+  font-size: 24px;
+  font-weight: 800;
+}
+
+.brand strong {
+  color: #ffffff;
+  font-family: inherit;
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: 2px;
+}
+
+.brand small {
+  color: #91a1b7;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+
+.menu-label {
+  margin: 18px 12px 7px;
+  color: #8292a8;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+}
+
+.menu-item {
+  min-height: 45px;
+  gap: 12px;
+  margin: 3px 0;
+  padding: 0 13px;
+  border-radius: 9px;
+  color: #bdc8d7;
+  font-size: 13px;
+  font-family: inherit;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.menu-item > span:first-child {
+  width: 22px;
+  color: #e6bd78;
+  font-size: 18px;
+}
+
+.menu-item:hover,
+.menu-item.active {
+  color: #ffffff;
+  background: #2b3e54;
+}
+
+.menu-item.active {
+  box-shadow: inset 3px 0 #e6bd78;
+}
+
+.sidebar-bottom {
+  border-top: 1px solid #314054;
+  color: #95a5b9;
+  font-family: inherit;
+  font-size: 11px;
+}
+
+.status-dot {
+  flex-shrink: 0;
+  background: #49c69a;
+  box-shadow: 0 0 0 4px rgb(73 198 154 / 12%);
+}
+
+/* Fondo y tipografía */
+
+.dashboard-main {
+  background: #f5f7fb;
+  color: #202b3c;
+}
+
+.topbar {
+  border-bottom-color: #e7ebf2;
+}
+
+.topbar h1,
+.page-heading h2,
+.welcome h2,
+.quick-actions h2 {
+  color: #172638;
+  font-family: Inter, "Segoe UI", Arial, sans-serif;
+  font-weight: 750;
+  letter-spacing: -0.5px;
+}
+
+.breadcrumb,
+.page-heading p,
+.panel-heading p,
+.welcome p {
+  color: #7d8898;
+}
+
+.eyebrow,
+.welcome-label {
+  color: #a17d43;
+  font-weight: 800;
+}
+
+/* Tarjetas y paneles */
+
+.stat-card,
+.data-panel,
+.panel,
+.room-panel,
+.form-panel,
+.action-card,
+.state-message {
+  border-color: #e7ebf2;
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 0 5px 18px rgb(23 38 56 / 3%);
+}
+
+/* Botones */
+
+.refresh-button,
+.primary-button,
+.secondary-button,
+.table-action,
+.action-confirm,
+.action-reject {
+  min-height: 40px;
+  border-radius: 8px;
+  font-family: Inter, "Segoe UI", Arial, sans-serif;
+  font-weight: 650;
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.refresh-button,
+.primary-button,
+.action-confirm {
+  border-color: #1d344d;
+  color: #ffffff;
+  background: #1d344d;
+}
+
+.refresh-button:hover:not(:disabled),
+.primary-button:hover:not(:disabled),
+.action-confirm:hover:not(:disabled) {
+  border-color: #2b4a69;
+  background: #2b4a69;
+}
+
+.secondary-button {
+  border: 1px solid #d8e1ec;
+  color: #1d344d;
+  background: #ffffff;
+}
+
+.secondary-button:hover:not(:disabled) {
+  border-color: #9aaec5;
+  background: #f7f9fc;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* Campos de búsqueda y formularios */
+
+input,
+select,
+textarea,
+.filter-search,
+.filter-status {
+  box-sizing: border-box;
+  border: 1px solid #d8e1ec;
+  border-radius: 8px;
+  color: #202b3c;
+  background: #ffffff;
+  font-family: Inter, "Segoe UI", Arial, sans-serif;
+}
+
+input:focus,
+select:focus,
+textarea:focus,
+.filter-search:focus,
+.filter-status:focus {
+  border-color: #58789c;
+  outline: 3px solid rgb(88 120 156 / 14%);
+}
+
+/* Tablas */
+
+.table-wrapper,
+.reservation-table-wrapper {
+  overflow-x: auto;
+  border-color: #e7ebf2;
+  border-radius: 10px;
+  background: #ffffff;
+}
+
+th,
+.reservation-table th {
+  color: #778499;
+  background: #f7f9fc;
+}
+
+td,
+.reservation-table td {
+  border-color: #e7ebf2;
+  color: #58677c;
+}
+
+/* Adaptación para pantallas pequeñas */
+
+@media (max-width: 760px) {
+  .admin-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .sidebar {
+    position: relative;
+    top: auto;
+    width: 100%;
+    height: auto;
+    min-height: 0;
+    padding: 18px;
+  }
+
+  .brand {
+    padding-bottom: 18px;
+  }
+
+  .dashboard-main {
+    min-width: 0;
+    width: 100%;
+    padding: 24px 16px 36px;
+  }
+}

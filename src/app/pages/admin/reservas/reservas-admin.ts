@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 
@@ -13,87 +13,186 @@ import { ReservaService } from '../../../core/services/reserva.service';
   templateUrl: './reservas-admin.html',
   styleUrl: './reservas-admin.scss'
 })
-export class ReservasAdminPage {
+export class ReservasAdminPage implements OnInit {
   private readonly reservaService = inject(ReservaService);
+  private readonly cdr = inject(ChangeDetectorRef);
 
-  codigo = '';
-  reserva: Reserva | null = null;
+  reservas: Reserva[] = [];
+  reservasFiltradas: Reserva[] = [];
 
-  buscando = false;
+  filtroEstado = 'todas';
+  busqueda = '';
+
+  cargando = false;
+  procesandoCodigo: string | null = null;
   error = '';
   mensaje = '';
 
-  consultarReserva(): void {
+  ngOnInit(): void {
+    this.cargarReservas();
+  }
+
+  cargarReservas(): void {
+    this.cargando = true;
     this.error = '';
-    this.mensaje = '';
-    this.reserva = null;
+    this.cdr.detectChanges();
 
-    const codigoLimpio = this.codigo.trim().toUpperCase();
-
-    if (!codigoLimpio) {
-      this.error = 'Introduce el código de la reserva.';
-      return;
-    }
-
-    this.buscando = true;
-
-    this.reservaService.buscarPorCodigo(codigoLimpio).subscribe({
-      next: reserva => {
-        this.reserva = reserva;
-        this.buscando = false;
-        this.mensaje = 'Reserva encontrada correctamente.';
+    this.reservaService.listarTodas().subscribe({
+      next: reservas => {
+        this.reservas = reservas ?? [];
+        this.aplicarFiltros();
+        this.cargando = false;
+        this.cdr.detectChanges();
       },
-      error: () => {
-        this.buscando = false;
-        this.error =
-          'No se pudo consultar la reserva. Verifica el código y que el backend esté funcionando.';
+      error: err => {
+        this.cargando = false;
+        this.error = err.status === 403
+          ? 'No tienes permisos para consultar las reservas.'
+          : 'No se pudieron cargar las reservas. Verifica que el backend esté funcionando.';
+
+        this.cdr.detectChanges();
       }
     });
   }
 
-  limpiarBusqueda(): void {
-    this.codigo = '';
-    this.reserva = null;
+  aplicarFiltros(): void {
+    const texto = this.busqueda.trim().toLowerCase();
+
+    this.reservasFiltradas = this.reservas.filter(reserva => {
+      const coincideEstado =
+        this.filtroEstado === 'todas' ||
+        reserva.estado?.toLowerCase() === this.filtroEstado;
+
+      const nombreCliente =
+        `${reserva.cliente?.nombres ?? ''} ${reserva.cliente?.apellidos ?? ''}`
+          .toLowerCase();
+
+      const coincideTexto =
+        !texto ||
+        reserva.codigo?.toLowerCase().includes(texto) ||
+        nombreCliente.includes(texto) ||
+        reserva.habitacion?.numero?.toLowerCase().includes(texto);
+
+      return coincideEstado && coincideTexto;
+    });
+  }
+
+  cambiarFiltro(estado: string): void {
+    this.filtroEstado = estado;
+    this.aplicarFiltros();
+  }
+
+  confirmarReserva(reserva: Reserva): void {
+    this.actualizarEstado(reserva, 'confirmada');
+  }
+
+  rechazarReserva(reserva: Reserva): void {
+    this.actualizarEstado(reserva, 'rechazada');
+  }
+
+  private actualizarEstado(
+    reserva: Reserva,
+    estado: 'confirmada' | 'rechazada'
+  ): void {
+    if (reserva.estado?.toLowerCase() !== 'pendiente') {
+      return;
+    }
+
+    const accion = estado === 'confirmada' ? 'confirmar' : 'rechazar';
+
+    if (!window.confirm(`¿Deseas ${accion} la reserva ${reserva.codigo}?`)) {
+      return;
+    }
+
     this.error = '';
     this.mensaje = '';
+    this.procesandoCodigo = reserva.codigo;
+    this.cdr.detectChanges();
+
+    this.reservaService.actualizarEstado(reserva.codigo, estado).subscribe({
+      next: actualizada => {
+        this.reservas = this.reservas.map(item =>
+          item.codigo === actualizada.codigo ? actualizada : item
+        );
+
+        this.aplicarFiltros();
+        this.procesandoCodigo = null;
+        this.mensaje = estado === 'confirmada'
+          ? `La reserva ${actualizada.codigo} fue confirmada.`
+          : `La reserva ${actualizada.codigo} fue rechazada.`;
+
+        this.cdr.detectChanges();
+      },
+      error: err => {
+        this.procesandoCodigo = null;
+        this.error = err.error?.message ||
+          (err.status === 403
+            ? 'No tienes permisos para gestionar reservas.'
+            : 'No se pudo actualizar la reserva. Recarga la lista e inténtalo nuevamente.');
+
+        this.cdr.detectChanges();
+      }
+    });
   }
 
   formatearPrecio(precio: number): string {
     return new Intl.NumberFormat('es-PE', {
       style: 'currency',
       currency: 'PEN'
-    }).format(precio);
+    }).format(precio ?? 0);
   }
 
   formatearEstado(estado: string): string {
     const estados: Record<string, string> = {
+      pendiente: 'Pendiente de revisión',
       confirmada: 'Confirmada',
+      rechazada: 'Rechazada',
+      cancelada: 'Cancelada',
       en_curso: 'En curso',
       finalizada: 'Finalizada',
-      cancelada: 'Cancelada',
-      pendiente: 'Pendiente',
       parcial: 'Pago parcial',
-      pagado: 'Pagado'
+      pagado: 'Pagado',
+      pendiente_pago: 'Pendiente de pago'
     };
 
-    return estados[estado?.toLowerCase()] ?? estado;
+    return estados[estado?.toLowerCase()] ?? estado ?? 'Sin estado';
   }
 
   claseEstado(estado: string): string {
-    const valor = estado?.toLowerCase();
+    switch (estado?.toLowerCase()) {
+      case 'confirmada':
+      case 'pagado':
+        return 'success';
 
-    if (valor === 'confirmada' || valor === 'pagado') {
-      return 'success';
+      case 'en_curso':
+      case 'parcial':
+        return 'warning';
+
+      case 'rechazada':
+      case 'cancelada':
+      case 'finalizada':
+        return 'neutral';
+
+      default:
+        return 'pending';
     }
+  }
 
-    if (valor === 'en_curso' || valor === 'parcial') {
-      return 'warning';
-    }
+  get pendientes(): number {
+    return this.reservas.filter(
+      reserva => reserva.estado?.toLowerCase() === 'pendiente'
+    ).length;
+  }
 
-    if (valor === 'finalizada' || valor === 'cancelada') {
-      return 'neutral';
-    }
+  get confirmadas(): number {
+    return this.reservas.filter(
+      reserva => reserva.estado?.toLowerCase() === 'confirmada'
+    ).length;
+  }
 
-    return 'pending';
+  get rechazadas(): number {
+    return this.reservas.filter(
+      reserva => reserva.estado?.toLowerCase() === 'rechazada'
+    ).length;
   }
 }

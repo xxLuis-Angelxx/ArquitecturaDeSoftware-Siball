@@ -1,0 +1,81 @@
+<app-header />
+
+<main class="my-bookings-page">
+  <header class="my-bookings-heading">
+    <span class="auth-eyebrow">TU EXPERIENCIA SIBALL</span>
+    <h1>Mis reservas</h1>
+    <p>
+      Consulta el estado, las fechas y el importe de tus estadías.
+    </p>
+  </header>
+
+  @if (cargando) {
+    <p class="bookings-state">Cargando tus reservas…</p>
+  } @else if (error) {
+    <p class="bookings-state bookings-error" role="alert">
+      {{ error }}
+    </p>
+  } @else if (reservas.length === 0) {
+    <section class="empty-bookings">
+      <h2>Aún no tienes reservas</h2>
+      <p>
+        Cuando reserves una habitación, la encontrarás aquí.
+      </p>
+      <a class="auth-submit" routerLink="/reservas">
+        Buscar habitaciones
+      </a>
+    </section>
+  } @else {
+    <section class="booking-list">
+      @for (reserva of reservas; track reserva.id ?? reserva.codigo) {
+        <article class="booking-item">
+          <div class="booking-item-heading">
+            <div>
+              <span class="booking-code">
+                Código {{ reserva.codigo }}
+              </span>
+              <h2>{{ nombreHabitacion(reserva) }}</h2>
+            </div>
+
+            <span class="booking-status">
+              {{ reserva.estado }}
+            </span>
+          </div>
+
+          <div class="booking-item-details">
+            <div>
+              <span>Entrada</span>
+              <strong>
+                {{ reserva.fechaEntrada | date:'dd/MM/yyyy' }}
+              </strong>
+            </div>
+
+            <div>
+              <span>Salida</span>
+              <strong>
+                {{ reserva.fechaSalida | date:'dd/MM/yyyy' }}
+              </strong>
+            </div>
+
+            <div>
+              <span>Huéspedes</span>
+              <strong>{{ reserva.cantidadHuespedes }}</strong>
+            </div>
+
+            <div>
+              <span>Pago</span>
+              <strong>{{ reserva.estadoPago }}</strong>
+            </div>
+
+            <div>
+              <span>Total</span>
+              <strong>{{ precio(reserva.total) }}</strong>
+            </div>
+          </div>
+        </article>
+      }
+    </section>
+  }
+</main>
+
+<app-footer />

@@ -1,6 +1,7 @@
+
 <div class="admin-layout">
   <aside class="sidebar">
-    <a routerLink="/inicio" class="brand">
+    <a routerLink="/admin" class="brand">
       <span class="brand-icon">S</span>
       <span>
         <strong>SIBALL</strong>
@@ -17,24 +18,24 @@
 
     <p class="menu-label">OPERACIONES</p>
 
-    <a routerLink="/habitaciones" class="menu-item">
+    <a routerLink="/admin/habitaciones" class="menu-item">
       <span>▤</span>
       Habitaciones
     </a>
 
-    <a routerLink="/reservas" class="menu-item">
+    <a routerLink="/admin/reservas" class="menu-item">
       <span>▧</span>
-      Nueva reserva
+      Reservas
     </a>
 
-    <a routerLink="/consultar-reserva" class="menu-item">
-      <span>⌕</span>
-      Consultar reserva
+    <a routerLink="/admin/estancias" class="menu-item">
+      <span>▣</span>
+      Estancias
     </a>
 
-    <a routerLink="/contacto" class="menu-item">
-      <span>✉</span>
-      Contacto
+    <a routerLink="/admin/pagos" class="menu-item">
+      <span>＄</span>
+      Pagos y comprobantes
     </a>
 
     <div class="sidebar-bottom">
@@ -139,6 +140,7 @@
               <h2>Estancias en curso</h2>
               <p>Huéspedes registrados actualmente</p>
             </div>
+
             <span class="count-badge">{{ estancias.length }}</span>
           </div>
 
@@ -150,6 +152,9 @@
                 Aquí aparecerán las estancias cuando se registre
                 un check-in.
               </p>
+              <a routerLink="/admin/estancias" class="action-card">
+                Administrar estancias →
+              </a>
             </div>
           } @else {
             <div class="table-wrapper">
@@ -171,21 +176,20 @@
                       </td>
                       <td>{{ nombreHuesped(estancia) }}</td>
                       <td>
-                        {{
-                          estancia.fechaCheckin
-                            | date: 'dd/MM/yyyy HH:mm'
-                        }}
+                        {{ estancia.fechaCheckin | date:'dd/MM/yyyy HH:mm' }}
                       </td>
                       <td>
-                        <span class="table-status">
-                          En curso
-                        </span>
+                        <span class="table-status">En curso</span>
                       </td>
                     </tr>
                   }
                 </tbody>
               </table>
             </div>
+
+            <a routerLink="/admin/estancias" class="public-link">
+              Ver todas las estancias →
+            </a>
           }
         </article>
 
@@ -195,6 +199,10 @@
               <h2>Estado de habitaciones</h2>
               <p>Resumen del inventario</p>
             </div>
+
+            <a routerLink="/admin/habitaciones" class="public-link">
+              Administrar →
+            </a>
           </div>
 
           @if (habitaciones.length === 0) {
@@ -230,33 +238,42 @@
       <section class="quick-actions">
         <div>
           <span class="welcome-label">ACCESOS RÁPIDOS</span>
-          <h2>¿Qué deseas hacer?</h2>
+          <h2>¿Qué deseas administrar?</h2>
         </div>
 
         <div class="actions-grid">
-          <a routerLink="/habitaciones" class="action-card">
+          <a routerLink="/admin/habitaciones" class="action-card">
             <span class="action-icon">▤</span>
             <span>
-              <strong>Ver habitaciones</strong>
-              <small>Consultar inventario público</small>
+              <strong>Habitaciones</strong>
+              <small>Gestionar el inventario</small>
             </span>
             <span class="action-arrow">→</span>
           </a>
 
-          <a routerLink="/reservas" class="action-card">
+          <a routerLink="/admin/reservas" class="action-card">
             <span class="action-icon">▧</span>
             <span>
-              <strong>Nueva reserva</strong>
-              <small>Registrar una solicitud</small>
+              <strong>Reservas</strong>
+              <small>Consultar y gestionar reservas</small>
             </span>
             <span class="action-arrow">→</span>
           </a>
 
-          <a routerLink="/consultar-reserva" class="action-card">
-            <span class="action-icon">⌕</span>
+          <a routerLink="/admin/estancias" class="action-card">
+            <span class="action-icon">▣</span>
             <span>
-              <strong>Consultar reserva</strong>
-              <small>Buscar por código</small>
+              <strong>Estancias</strong>
+              <small>Gestionar entradas y salidas</small>
+            </span>
+            <span class="action-arrow">→</span>
+          </a>
+
+          <a routerLink="/admin/pagos" class="action-card">
+            <span class="action-icon">＄</span>
+            <span>
+              <strong>Pagos y comprobantes</strong>
+              <small>Registrar y consultar pagos</small>
             </span>
             <span class="action-arrow">→</span>
           </a>

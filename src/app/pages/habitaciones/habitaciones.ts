@@ -1,4 +1,11 @@
-import { Component, OnInit, inject } from '@angular/core';
+
+import {
+  Component,
+  OnInit,
+  inject,
+  ChangeDetectorRef
+} from '@angular/core';
+
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 
@@ -21,12 +28,14 @@ import { Habitacion } from '../../core/models/habitacion.model';
 })
 export class HabitacionesPage implements OnInit {
   private readonly habitacionService = inject(HabitacionService);
+  private readonly cdr = inject(ChangeDetectorRef);
 
   habitaciones: Habitacion[] = [];
   cargando = true;
   error = '';
 
   ngOnInit(): void {
+    console.log('[Habitaciones] Componente inicializado');
     this.cargarHabitaciones();
   }
 
@@ -34,15 +43,47 @@ export class HabitacionesPage implements OnInit {
     this.cargando = true;
     this.error = '';
 
+    this.cdr.detectChanges();
+
+    console.log('[Habitaciones] Solicitando datos al backend...');
+
     this.habitacionService.listar().subscribe({
-      next: habitaciones => {
-        this.habitaciones = habitaciones;
+      next: (respuesta: Habitacion[]) => {
+        console.log('[Habitaciones] Respuesta recibida:', respuesta);
+        console.log(
+          '[Habitaciones] ¿Es un arreglo?',
+          Array.isArray(respuesta)
+        );
+
+        this.habitaciones = respuesta;
         this.cargando = false;
+
+        this.cdr.detectChanges();
+
+        console.log(
+          '[Habitaciones] Cantidad:',
+          this.habitaciones.length
+        );
+
+        console.log(
+          '[Habitaciones] Cargando:',
+          this.cargando
+        );
       },
-      error: () => {
+
+      error: (error: unknown) => {
+        console.error('[Habitaciones] Error HTTP:', error);
+
         this.error =
           'No se pudieron cargar las habitaciones. Verifica que el backend esté funcionando.';
+
         this.cargando = false;
+
+        this.cdr.detectChanges();
+      },
+
+      complete: () => {
+        console.log('[Habitaciones] Solicitud completada');
       }
     });
   }

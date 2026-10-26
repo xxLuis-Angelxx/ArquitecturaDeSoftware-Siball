@@ -1,5 +1,11 @@
+
 import { CommonModule, DatePipe } from '@angular/common';
-import { Component, OnInit } from '@angular/core';
+import {
+  ChangeDetectorRef,
+  Component,
+  OnInit,
+  inject
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { finalize } from 'rxjs';
@@ -21,8 +27,10 @@ import { EstanciaService } from '../../../core/services/estancia.service';
   styleUrl: './estancias-admin.scss'
 })
 export class EstanciasAdminPage implements OnInit {
-  estancias: Estancia[] = [];
+  private readonly estanciaService = inject(EstanciaService);
+  private readonly cdr = inject(ChangeDetectorRef);
 
+  estancias: Estancia[] = [];
   codigoReserva = '';
 
   cargando = false;
@@ -32,23 +40,30 @@ export class EstanciasAdminPage implements OnInit {
   mensaje = '';
   tipoMensaje: 'exito' | 'error' | '' = '';
 
-  constructor(private readonly estanciaService: EstanciaService) {}
-
   ngOnInit(): void {
     this.cargarEstancias();
   }
 
   cargarEstancias(): void {
     this.cargando = true;
+    this.cdr.detectChanges();
 
     this.estanciaService
       .listar('en_curso')
-      .pipe(finalize(() => (this.cargando = false)))
+      .pipe(
+        finalize(() => {
+          this.cargando = false;
+          this.cdr.detectChanges();
+        })
+      )
       .subscribe({
-        next: (estancias) => {
+        next: estancias => {
           this.estancias = estancias ?? [];
+          this.cdr.detectChanges();
         },
-        error: (error) => {
+        error: error => {
+          console.error('[EstanciasAdmin] Error al cargar:', error);
+
           this.mostrarMensaje(
             this.obtenerMensajeError(
               error,
@@ -73,10 +88,16 @@ export class EstanciasAdminPage implements OnInit {
 
     this.registrandoCheckin = true;
     this.limpiarMensaje();
+    this.cdr.detectChanges();
 
     this.estanciaService
       .checkin({ codigoReserva: codigo })
-      .pipe(finalize(() => (this.registrandoCheckin = false)))
+      .pipe(
+        finalize(() => {
+          this.registrandoCheckin = false;
+          this.cdr.detectChanges();
+        })
+      )
       .subscribe({
         next: () => {
           this.codigoReserva = '';
@@ -88,7 +109,9 @@ export class EstanciasAdminPage implements OnInit {
 
           this.cargarEstancias();
         },
-        error: (error) => {
+        error: error => {
+          console.error('[EstanciasAdmin] Error en check-in:', error);
+
           this.mostrarMensaje(
             this.obtenerMensajeError(
               error,
@@ -109,9 +132,12 @@ export class EstanciasAdminPage implements OnInit {
       return;
     }
 
+    const numeroHabitacion =
+      estancia.reserva?.habitacion?.numero ?? 'sin número';
+
     if (
       !confirm(
-        `¿Confirmas el checkout de la habitación ${estancia.reserva.habitacion.numero}?`
+        `¿Confirmas el checkout de la habitación ${numeroHabitacion}?`
       )
     ) {
       return;
@@ -119,22 +145,32 @@ export class EstanciasAdminPage implements OnInit {
 
     this.procesandoCheckoutId = estancia.id;
     this.limpiarMensaje();
+    this.cdr.detectChanges();
 
     this.estanciaService
       .checkout(estancia.id)
-      .pipe(finalize(() => (this.procesandoCheckoutId = null)))
+      .pipe(
+        finalize(() => {
+          this.procesandoCheckoutId = null;
+          this.cdr.detectChanges();
+        })
+      )
       .subscribe({
         next: () => {
           this.estancias = this.estancias.filter(
-            (item) => item.id !== estancia.id
+            item => item.id !== estancia.id
           );
 
           this.mostrarMensaje(
             'Checkout registrado correctamente. La habitación queda pendiente de limpieza.',
             'exito'
           );
+
+          this.cdr.detectChanges();
         },
-        error: (error) => {
+        error: error => {
+          console.error('[EstanciasAdmin] Error en checkout:', error);
+
           this.mostrarMensaje(
             this.obtenerMensajeError(
               error,
@@ -147,9 +183,14 @@ export class EstanciasAdminPage implements OnInit {
   }
 
   nombreCompleto(estancia: Estancia): string {
-    const cliente = estancia.reserva.cliente;
+    const cliente = estancia.reserva?.cliente;
 
-    return `${cliente.nombres} ${cliente.apellidos}`.trim();
+    if (!cliente) {
+      return 'No disponible';
+    }
+
+    return `${cliente.nombres ?? ''} ${cliente.apellidos ?? ''}`.trim()
+      || 'No disponible';
   }
 
   private mostrarMensaje(
@@ -158,17 +199,22 @@ export class EstanciasAdminPage implements OnInit {
   ): void {
     this.mensaje = mensaje;
     this.tipoMensaje = tipo;
+    this.cdr.detectChanges();
   }
 
   private limpiarMensaje(): void {
     this.mensaje = '';
     this.tipoMensaje = '';
+    this.cdr.detectChanges();
   }
 
-  private obtenerMensajeError(error: any, alternativa: string): string {
+  private obtenerMensajeError(
+    error: any,
+    alternativa: string
+  ): string {
     return (
-      error?.error?.message ||
       error?.error?.mensaje ||
+      error?.error?.message ||
       (typeof error?.error === 'string' ? error.error : '') ||
       alternativa
     );

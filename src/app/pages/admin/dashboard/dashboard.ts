@@ -1,5 +1,11 @@
+
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject } from '@angular/core';
+import {
+  ChangeDetectorRef,
+  Component,
+  OnInit,
+  inject
+} from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
 
@@ -19,6 +25,7 @@ import { Estancia } from '../../../core/models/estancia.model';
 export class DashboardPage implements OnInit {
   private readonly habitacionService = inject(HabitacionService);
   private readonly estanciaService = inject(EstanciaService);
+  private readonly cdr = inject(ChangeDetectorRef);
 
   habitaciones: Habitacion[] = [];
   estancias: Estancia[] = [];
@@ -33,20 +40,31 @@ export class DashboardPage implements OnInit {
   cargarDashboard(): void {
     this.cargando = true;
     this.error = '';
+    this.cdr.detectChanges();
 
     forkJoin({
       habitaciones: this.habitacionService.listar(),
       estancias: this.estanciaService.listar('en_curso')
     }).subscribe({
-      next: resultado => {
+      next: (resultado) => {
         this.habitaciones = resultado.habitaciones;
         this.estancias = resultado.estancias;
         this.cargando = false;
+
+        this.cdr.detectChanges();
+
+        console.log('[Dashboard] Habitaciones:', this.habitaciones.length);
+        console.log('[Dashboard] Estancias activas:', this.estancias.length);
       },
-      error: () => {
+
+      error: (err) => {
+        console.error('[Dashboard] Error de carga:', err);
+
         this.error =
           'No se pudieron cargar los datos. Verifica que Spring Boot y MariaDB estén funcionando.';
+
         this.cargando = false;
+        this.cdr.detectChanges();
       }
     });
   }

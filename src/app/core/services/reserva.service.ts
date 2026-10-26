@@ -21,9 +21,27 @@ export class ReservaService {
     return this.http.post<ReservaResponse>(this.url, request);
   }
 
+  listarMias(): Observable<Reserva[]> {
+    return this.http.get<Reserva[]>(`${this.url}/mias`);
+  }
+
+  listarTodas(): Observable<Reserva[]> {
+    return this.http.get<Reserva[]>(this.url);
+  }
+
   buscarPorCodigo(codigo: string): Observable<Reserva> {
     return this.http.get<Reserva>(
       `${this.url}/${encodeURIComponent(codigo)}`
+    );
+  }
+
+  actualizarEstado(
+    codigo: string,
+    estado: 'confirmada' | 'rechazada'
+  ): Observable<Reserva> {
+    return this.http.patch<Reserva>(
+      `${this.url}/${encodeURIComponent(codigo)}/estado`,
+      { estado }
     );
   }
 }
